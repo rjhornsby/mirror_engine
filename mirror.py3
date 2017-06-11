@@ -5,49 +5,49 @@ import time
 import sys
 import os
 import random
-import pygame.mixer
-from threading import Thread
+import simpleaudio as sa
+import alsaaudio
 
 class Sound():
     def __init__(self):
+        self.mixer = alsaaudio.Mixer('PCM')
+        self.channel = alsaaudio.MIXER_CHANNEL_ALL
         valid_extensions = ['.wav']
         self.library = {}
-        self.channel = pygame.mixer.Channel(0)
-        for file in os.listdir('audio'):
-            print('Loading audio file %s' % (file))
+        self.now_playing = None
+
+        path = 'audio/'
+        for file in os.listdir(path):
             filename, extension = os.path.splitext(file)
             if extension in valid_extensions:
-                self.library[file] = pygame.mixer.Sound(file)
+                # self.library[file] = pygame.mixer.Sound(file)
+                print('Loading audio file %s' % (file))
+                self.library[file] = sa.WaveObject.from_wave_file(path + file)
         print('Loaded %s sounds' % (len(self.library)))
     def play(self):
+        self.mixer.setvolume(100)
         name, sound = random.choice(list(self.library.items()))
         print('playing %s' % (name))
-        self.channel.play(sound)
-    
+        self.now_playing = sound.play()
+
     def stop(self):
         if self.is_busy():
-            self.channel.fadeout(1000) 
-        
+            for i in range(100, 0, -5):
+                self.mixer.setvolume(i)
+                time.sleep(0.05)
+            self.now_playing.stop()
+
     def is_busy(self):
-        return self.channel.get_busy()
-        
-# class Audio(Thread):
-#     def __init__(self):
-#         ''' Constructor '''
-#         Thread.__init__(self)
-#     def run(self):
-#         track = 'audio/' + random.choice(os.listdir('audio'))
-#         print "[%s] Playing track: %s" % (self.getName(), track)
-#         os.system('omxplayer ' + track)
-#     def terminate(self):
-#         self._running = False
-    
+        if self.now_playing is None:
+            return False
+        return self.now_playing.is_playing()
+
 def init_relays(relay_list, quiet=True):
     print("Initializing relays, please wait")
     for pin in relay_list:
         GPIO.setup(pin, GPIO.OUT)
         GPIO.output(pin, GPIO.HIGH)
-        
+
     if quiet == False:
         for pin in relay_list: # cycle individual
             GPIO.output(pin, GPIO.LOW)
@@ -63,14 +63,6 @@ def init_relays(relay_list, quiet=True):
             GPIO.output(pin, GPIO.HIGH)
 
 def init_audio(use_hdmi=False):
-    # pygame.mixer.init(44100,-16,2,2048)
-    pygame.mixer.init()
-    # pygame.mixer.music.load('sunrise.mp3')
-    # pygame.mixer.music.play()
-    # audio1 = pygame.mixer.Sound('sunrise.wav')
-    # channel1 = pygame.mixer.Channel(1)
-    # channel1.play(audio1)
-    
     if use_hdmi:
         print('Audio: using HDMI')
         os.system('amixer cset numid=3 2')
@@ -84,13 +76,13 @@ def init_audio(use_hdmi=False):
         print('Audio: using 3.5mm')
         os.system('amixer cset numid=3 1')
         os.system('amixer sset "PCM" 100%')
-    
+
 class SwitchPad:
 
     def __init__(self, relay_list):
         self.sounds = Sound()
         self.relay_list = relay_list
-        
+
     def state_changed(self, state):
         print(time.strftime('%H:%M:%S: ' + str(state)))
         if state == True:
@@ -98,7 +90,7 @@ class SwitchPad:
                 self.sounds.play()
             else:
                 print("Sound already playing")
-                # self.sounds.stop()
+
             random_list = self.relay_list
             random.shuffle(random_list)
             for pin in self.relay_list:
@@ -108,18 +100,18 @@ class SwitchPad:
             for pin in self.relay_list:
                 GPIO.output(pin, GPIO.HIGH)
             self.sounds.stop()
-        
+
 def main(argv):
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     # relay_list = [5, 6, 13, 19]
     relay_list = [5]
-    init_audio(True)
+    init_audio(False)
     init_relays(relay_list, True)
     last_input_state = GPIO.input(21)
-    
+
     pad = SwitchPad(relay_list)
-    
+
     try:
         print("Ready, starting loop")
         while True:
