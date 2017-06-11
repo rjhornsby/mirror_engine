@@ -20,8 +20,6 @@ class Sound():
         for file in os.listdir(path):
             filename, extension = os.path.splitext(file)
             if extension in valid_extensions:
-                # self.library[file] = pygame.mixer.Sound(file)
-                print('Loading audio file %s' % (file))
                 self.library[file] = sa.WaveObject.from_wave_file(path + file)
         print('Loaded %s sounds' % (len(self.library)))
     def play(self):
