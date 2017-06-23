@@ -10,10 +10,37 @@ from random import *
 # Set up some constants
 FADE_IN_TIME = 3
 FADE_OUT_TIME = 2
-FADE_IN_EASING = lambda x: x # Linear
-FADE_OUT_EASING = lambda x: x # Linear
 
-class myThread(threading.Thread):
+class MirrorText:
+    def __init__(self):
+
+        self.fontlib = []
+        self.screen = None
+        self.phrases = None
+
+        fontdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "fonts")
+        pygame.init()
+        pygame.mouse.set_visible(False)
+        font_exts = ['.otf', '.ttf']
+
+        for file in os.listdir(fontdir):
+            filename, extension = os.path.splitext(file)
+            if extension in font_exts:
+                self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), 72))
+
+        self.screen = pygame.display.set_mode((1024, 768))
+        self.screen.fill(FadingText.COLORS['black'])
+        pygame.display.flip()
+
+        with open('phrases.json') as phrase_file:
+            self.phrases = json.load(phrase_file)
+
+        # Randomize the sequence - but don't choose a random phrase from the list each time
+        # otherwise, you risk duplicate consecutive phrases
+        shuffle(self.phrases)
+
+
+class FadeThread(threading.Thread):
 
     def __init__(self, threadID, name, fading_text, fade_interval):
         threading.Thread.__init__(self)
@@ -35,6 +62,8 @@ class FadingText:
     ST_FADEOUT = 1
     LINE_SPACING = -2
     MARGIN = 0.05
+    FADE_IN_EASING = lambda x: x  # Linear
+    FADE_OUT_EASING = lambda x: x  # Linear
 
     COLORS = {
         "white": pygame.Color(255, 255, 255),
@@ -62,11 +91,11 @@ class FadingText:
                 return
             
         if direction == FadingText.ST_FADEIN:
-            self.thr = myThread(0, 'fade_in', self, fade_interval)
+            self.thr = FadeThread(0, 'fade_in', self, fade_interval)
             self.thr.start()
             # don't join the thread so that new events aren't queued
         elif direction == FadingText.ST_FADEOUT:
-            self.thr = myThread(0, 'fade_out', self, fade_interval)
+            self.thr = FadeThread(0, 'fade_out', self, fade_interval)
             self.thr.start()
         else:
             return
@@ -91,7 +120,7 @@ class FadingText:
                 return
 
             state_time = time.time() + adv_offset - last_state_change
-            self.alpha = FADE_IN_EASING(1.0 * state_time / fade_interval)
+            self.alpha = FadingText.FADE_IN_EASING(1.0 * state_time / fade_interval)
 
             self.draw()
             
@@ -117,7 +146,7 @@ class FadingText:
                 return
 
             state_time = time.time() + adv_offset - last_state_change
-            self.alpha = 1. - FADE_OUT_EASING(1.0 * state_time / fade_interval)
+            self.alpha = 1. - FadingText.FADE_OUT_EASING(1.0 * state_time / fade_interval)
 
             self.draw()
         
@@ -206,33 +235,12 @@ class FadingText:
 
 
 def main():
-    fontdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "fonts")
 
-    pygame.init()
-    pygame.mouse.set_visible(False)
-    font_exts = ['.otf', '.ttf']
-    fontlib = []
-    for file in os.listdir(fontdir):
-        filename, extension = os.path.splitext(file)
-        if extension in font_exts:
-            fontlib.append(pygame.font.Font(os.path.join(fontdir, file), 72))
-
-    screen = pygame.display.set_mode((1024, 768))
-    screen.fill(FadingText.COLORS['black'])
-    pygame.display.flip()
-
-    clock = pygame.time.Clock()
+    mirror = MirrorText()
     done = False
 
-    with open('phrases.json') as phrase_file:
-        phrases = json.load(phrase_file)
-
-    # Randomize the sequence - but don't choose a random phrase from the list each time
-    # otherwise, you risk duplicate consecutive phrases
-    shuffle(phrases)
-
     phrase_index = 0
-    fading_text = FadingText(screen, fontlib, phrases[phrase_index]['text'])
+    fading_text = FadingText(mirror.screen, mirror.fontlib, mirror.phrases[phrase_index]['text'])
 
     while not done:
         for event in pygame.event.get():
@@ -251,10 +259,10 @@ def main():
                     fading_text.fade(fading_text.ST_FADEOUT, 1)
                 elif event.key == pygame.K_SPACE:
                     phrase_index += 1
-                    if phrase_index >= len(phrases):
+                    if phrase_index >= len(mirror.phrases):
                         phrase_index = 0
                     fading_text.stop()
-                    fading_text = FadingText(screen, fontlib, phrases[phrase_index]['text']) # create a new one
+                    fading_text = FadingText(mirror.screen, mirror.fontlib, mirror.phrases[phrase_index]['text'])  # create a new one
                     fading_text.fade(fading_text.ST_FADEIN, 3)
                 else:
                     fading_text.stop()
