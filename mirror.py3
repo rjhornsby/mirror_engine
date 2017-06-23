@@ -8,7 +8,8 @@ import random
 import simpleaudio as sa
 import alsaaudio
 
-class Sound():
+
+class Sound:
     def __init__(self):
         self.mixer = alsaaudio.Mixer('PCM')
         self.channel = alsaaudio.MIXER_CHANNEL_ALL
@@ -22,10 +23,11 @@ class Sound():
             if extension in valid_extensions:
                 self.library[file] = sa.WaveObject.from_wave_file(path + file)
         print('Loaded %s sounds' % (len(self.library)))
+
     def play(self):
         self.mixer.setvolume(100)
         name, sound = random.choice(list(self.library.items()))
-        print('playing %s' % (name))
+        print('playing %s' % name)
         self.now_playing = sound.play()
 
     def stop(self):
@@ -40,13 +42,14 @@ class Sound():
             return False
         return self.now_playing.is_playing()
 
+
 def init_relays(relay_list, quiet=True):
     print("Initializing relays, please wait")
     for pin in relay_list:
         GPIO.setup(pin, GPIO.OUT)
         GPIO.output(pin, GPIO.HIGH)
 
-    if quiet == False:
+    if not quiet:
         for pin in relay_list: # cycle individual
             GPIO.output(pin, GPIO.LOW)
             time.sleep(0.25)
@@ -59,6 +62,7 @@ def init_relays(relay_list, quiet=True):
 
         for pin in relay_list: # all off
             GPIO.output(pin, GPIO.HIGH)
+
 
 def init_audio(use_hdmi=False):
     if use_hdmi:
@@ -75,6 +79,7 @@ def init_audio(use_hdmi=False):
         os.system('amixer cset numid=3 1')
         os.system('amixer sset "PCM" 100%')
 
+
 class SwitchPad:
 
     def __init__(self, relay_list):
@@ -89,23 +94,28 @@ class SwitchPad:
             else:
                 print("Sound already playing")
 
-            random_list = self.relay_list
-            random.shuffle(random_list)
-            for pin in self.relay_list:
-                GPIO.output(pin, GPIO.LOW)
-                time.sleep(0.50)
+            time.sleep(0.5)
+            GPIO.output(5, GPIO.LOW)
+            time.sleep(2)
+            GPIO.output(6, GPIO.LOW)
+            time.sleep(2)
+            GPIO.output(13, GPIO.LOW)
+#            for pin in self.relay_list:
+#                GPIO.output(pin, GPIO.LOW)
+#                time.sleep(1.0)
         else:
             for pin in self.relay_list:
                 GPIO.output(pin, GPIO.HIGH)
             self.sounds.stop()
 
+
 def main(argv):
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    # relay_list = [5, 6, 13, 19]
-    relay_list = [5]
-    init_audio(False)
-    init_relays(relay_list, True)
+    relay_list = [5, 6, 13, 19]
+    # relay_list = [5]
+    init_audio(True)
+    init_relays(relay_list, False)
     last_input_state = GPIO.input(21)
 
     pad = SwitchPad(relay_list)
@@ -113,7 +123,7 @@ def main(argv):
     try:
         print("Ready, starting loop")
         while True:
-            input_state=GPIO.input(21)
+            input_state = GPIO.input(21)
             if GPIO.input(21) != last_input_state:
                 time.sleep(0.25) # wait to make sure it really changed
                 if GPIO.input(21) != last_input_state:
