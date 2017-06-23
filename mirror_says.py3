@@ -2,22 +2,23 @@
 
 import os, sys, time
 import pygame
-from pygame.locals import *
 import threading
+import json
+from pygame.locals import *
 from random import *
 
 # Set up some constants
 colors = {
-    "white"     : pygame.Color(255, 255, 255),
-    "black"     : pygame.Color(0, 0, 0),
-    "gray"      : pygame.Color(127, 127, 127)
+    "white": pygame.Color(255, 255, 255),
+    "black": pygame.Color(0, 0, 0),
+    "gray":  pygame.Color(127, 127, 127)
 }
 FADE_IN_TIME = 5
 FADE_OUT_TIME = 5
 FADE_IN_EASING = lambda x: x # Linear
 FADE_OUT_EASING = lambda x: x # Linear
 
-fontdir = os.path.join(os.path.dirname(os.path.abspath( __file__)),"data", "fonts")
+fontdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "fonts")
 
 pygame.init()
 pygame.mouse.set_visible(False)
@@ -26,8 +27,7 @@ fontlib = []
 for file in os.listdir(fontdir):
     filename, extension = os.path.splitext(file)
     if extension in font_exts:
-        font = pygame.font.Font(os.path.join(fontdir, file), 64)
-        fontlib.append(font)
+        fontlib.append(pygame.font.Font(os.path.join(fontdir, file), 72))
     
 screen = pygame.display.set_mode((1024, 768))
 screen.fill(colors['black'])
@@ -37,12 +37,14 @@ clock = pygame.time.Clock()
 done = False
 
 class myThread(threading.Thread):
+
     def __init__(self, threadID, name, fading_text, fade_interval):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
         self.fading_text = fading_text
         self.fade_interval = fade_interval
+
     def run(self):
         if self.name == 'fade_in':
             self.fading_text.fade_in(self.fade_interval)
@@ -64,13 +66,13 @@ class FadingText:
         self.alpha = 0.0
         self.state_time = time.time()
         self.last_state_change = time.time()
-        font = choice(fontlib)
-        self.t1 = font.render(text, True, colors['white'])
-        width, height = pygame.display.Info().current_w, pygame.display.Info().current_h
-        self.t1_rect = self.t1.get_rect(center=(width / 2, height / 2))
-        self.position = self.random_position(self.t1_rect)
+        self.font = choice(fontlib)
+        # self.t1 = font.render(text, True, colors['white'])
+        # width, height = pygame.display.Info().current_w, pygame.display.Info().current_h
+        # self.t1_rect = self.t1.get_rect(center=(width / 2, height / 2))
+        # self.position = self.random_position(self.t1_rect)
         
-        print("position: {}".format(self.position))
+        # print("position: {}".format(self.position))
         
     def fade(self, direction, fade_interval):
         if self.thr is not None:
@@ -108,9 +110,8 @@ class FadingText:
 
             state_time = time.time() + adv_offset - last_state_change
             self.alpha = FADE_IN_EASING(1.0 * state_time / fade_interval)
-            
-            rt = self.t1
-            self.draw(rt)
+
+            self.draw()
             clock.tick(50)
             
         self.state = FadingText.ST_FADEIN
@@ -136,21 +137,48 @@ class FadingText:
 
             state_time = time.time() + adv_offset - last_state_change
             self.alpha = 1. - FADE_OUT_EASING(1.0 * state_time / fade_interval)
-            
-            rt = self.t1
-            self.draw(rt)
+
+            self.draw()
         
         self.state = FadingText.ST_FADEOUT
         self.alpha = 0.0
 
-    def draw(self, rt):
-        s2 = pygame.surface.Surface((self.t1_rect.width, self.t1_rect.height))
+    def draw(self):
+
+        y = 0
+        linespacing = -2
+        text = self.text
+
+        # clear the screen
+        screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
+        s2 = pygame.surface.Surface((screen_w, screen_h))
         s2.set_alpha(255 * self.alpha)
         self.screen.fill(colors['black'])
-        
-        s2.blit(rt, (0,0)) # always draw onto 0,0 of the s2 surface
-        self.screen.blit(s2, self.position)
+
+        font_height = self.font.size('Tg')[1]
+
+        while text:
+            i = 1
+            if y + font_height > screen_h:
+                break
+
+            while self.font.size(text[:i])[0] < screen_w and i < len(text):
+                i += 1
+
+            if i < len(text):
+                i = text.rfind(" ", 0, i) + 1
+
+            rendered_text = self.font.render(text[:i], True, colors['white'])
+
+            s2.blit(rendered_text, (0, y))
+
+            y += font_height + linespacing
+            text = text[i:]
+
+        self.screen.blit(s2, (0, 0))  # always draw onto 0,0 of the screen surface
         pygame.display.flip()
+
+        return text
 
     def random_position(self, rect):
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
@@ -162,29 +190,25 @@ class FadingText:
         if y < 0:
             y = 0
         
-        return (x,y)
+        return x, y
+
 
 def center(width, height):
+
     disp_info = pygame.display.Info()
     center_w = disp_info.current_w // 2 - width // 2
     center_h = disp_info.current_h // 2 - height // 2
-    return (center_w, center_h)
+    return center_w, center_h
 
-phrases = [
-    "hello, world!",
-    "goodbye, cruel world",
-    "phrase3",
-    "phrase4",
-    "phrase5",
-    "phrase6",
-]
+with open('phrases.json') as phrase_file:
+    phrases = json.load(phrase_file)
 
 # Randomize the sequence - but don't choose a random phrase from the list each time
 # otherwise, you risk duplicate consecutive phrases
 shuffle(phrases)
 
 phrase_index = 0
-fading_text = FadingText(screen, phrases[phrase_index])
+fading_text = FadingText(screen, phrases[phrase_index]['text'])
 
 while not done:
     for event in pygame.event.get():
@@ -206,10 +230,9 @@ while not done:
                 if phrase_index >= len(phrases):
                     phrase_index = 0
                 fading_text.stop()
-                fading_text = FadingText(screen, phrases[phrase_index]) # create a new one
+                fading_text = FadingText(screen, phrases[phrase_index]['text']) # create a new one
                 fading_text.fade(fading_text.ST_FADEIN, 3)
             else:
                 fading_text.stop()
                 # screen.fill(colors['black'])
                 # pygame.display.flip()
-                
