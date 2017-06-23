@@ -56,7 +56,8 @@ class FadingText:
     
     ST_FADEIN = 0
     ST_FADEOUT = 1
-    
+    LINE_SPACING = -2
+
     def __init__(self, screen, text):
         self.thr = None
         self.stopping = False
@@ -67,6 +68,8 @@ class FadingText:
         self.state_time = time.time()
         self.last_state_change = time.time()
         self.font = choice(fontlib)
+        self.rendered_text = []
+        self.predraw()
         # self.t1 = font.render(text, True, colors['white'])
         # width, height = pygame.display.Info().current_w, pygame.display.Info().current_h
         # self.t1_rect = self.t1.get_rect(center=(width / 2, height / 2))
@@ -143,19 +146,14 @@ class FadingText:
         self.state = FadingText.ST_FADEOUT
         self.alpha = 0.0
 
-    def draw(self):
-
-        y = 0
-        linespacing = -2
+    def predraw(self):
+        # wrapping: http://pygame.org/wiki/TextWrap
         text = self.text
-
+        y = 0
         # clear the screen
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
-        s2 = pygame.surface.Surface((screen_w, screen_h))
-        s2.set_alpha(255 * self.alpha)
-        self.screen.fill(colors['black'])
-
         font_height = self.font.size('Tg')[1]
+        longest_line_length = 0
 
         while text:
             i = 1
@@ -168,17 +166,34 @@ class FadingText:
             if i < len(text):
                 i = text.rfind(" ", 0, i) + 1
 
-            rendered_text = self.font.render(text[:i], True, colors['white'])
+            rendered_line = self.font.render(text[:i], True, colors['white'])
 
-            s2.blit(rendered_text, (0, y))
+            if rendered_line.get_rect().width > longest_line_length:
+                longest_line_length = rendered_line.get_rect().width
 
-            y += font_height + linespacing
+            self.rendered_text.append(rendered_line)
+            y += font_height + FadingText.LINE_SPACING
             text = text[i:]
+
+        return text
+
+    def draw(self):
+
+        y = 0
+        font_height = self.font.size('Tg')[1]
+
+        # clear the screen
+        screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
+        s2 = pygame.surface.Surface((screen_w, screen_h))
+        s2.set_alpha(255 * self.alpha)
+        self.screen.fill(colors['black'])
+
+        for rendered_line in self.rendered_text:
+            s2.blit(rendered_line, (0, y))
+            y += font_height + FadingText.LINE_SPACING
 
         self.screen.blit(s2, (0, 0))  # always draw onto 0,0 of the screen surface
         pygame.display.flip()
-
-        return text
 
     def random_position(self, rect):
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
