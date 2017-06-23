@@ -81,18 +81,23 @@ class FadingText:
         self.stopping = True
     
     def fade_in(self):
-        if self.state == FadingText.ST_FADEIN:
+        if self.alpha >= 1.0:
             return
 
         self.stopping = False
 
         last_state_change = time.time()
+        adv_offset = 0
+
+        if self.alpha < 1.0:
+            adv_offset = self.alpha * FADE_IN_TIME
+            print("initial alpha: {} offset: {}".format(self.alpha,adv_offset))
 
         while self.alpha < 1.0:
             if self.stopping:
                 return
 
-            state_time = time.time() - last_state_change
+            state_time = time.time() + adv_offset - last_state_change
             self.alpha = FADE_IN_EASING(1.0 * state_time / FADE_IN_TIME)
             
             rt = self.t1
@@ -100,29 +105,37 @@ class FadingText:
             clock.tick(50)
             
         self.state = FadingText.ST_FADEIN
+        self.alpha = 1.0
     
     def fade_out(self):
-        if self.state == FadingText.ST_FADEOUT:
+        if self.alpha <= 0.0:
             return
 
         self.stopping = False
 
         last_state_change = time.time()
-
+        adv_offset = 0
+        # If we're not completely transparent, artifically pretend that
+        # we're farther along in the fade than we are, which gives the
+        # effect of resuming fade
+        if self.alpha > 0.0:
+            adv_offset = FADE_OUT_TIME - self.alpha * FADE_OUT_TIME
+            print("initial alpha: {}".format(self.alpha))
+            
         while self.alpha > 0.0:
             if self.stopping:
                 return
 
-            state_time = time.time() - last_state_change
+            state_time = time.time() + adv_offset - last_state_change
             self.alpha = 1. - FADE_OUT_EASING(1.0 * state_time / FADE_OUT_TIME)
             
             rt = self.t1
             self.draw(rt)
         
         self.state = FadingText.ST_FADEOUT
+        self.alpha = 0.0
 
     def draw(self, rt):
-        print("alpha: {}".format(self.alpha))
         s2 = pygame.surface.Surface((self.t1_rect.width, self.t1_rect.height))
         s2.set_alpha(255 * self.alpha)
         self.screen.fill(colors['black'])
@@ -138,7 +151,6 @@ def center(width, height):
     return (center_w, center_h)
 
 fading_text = FadingText(screen, "hello, world!")
-# fading_text.fade_in()
 
 while not done:
     for event in pygame.event.get():
@@ -153,6 +165,6 @@ while not done:
                 fading_text.fade(fading_text.ST_FADEOUT)
             else:
                 fading_text.stop()
-                screen.fill(colors['black'])
-                pygame.display.flip()
+                # screen.fill(colors['black'])
+                # pygame.display.flip()
                 
