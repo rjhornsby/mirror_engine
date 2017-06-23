@@ -7,7 +7,7 @@ import os
 import random
 import simpleaudio as sa
 import alsaaudio
-
+import mirror_display
 
 class Sound:
     def __init__(self):
@@ -45,6 +45,10 @@ class Sound:
 
 def init_relays(relay_list, quiet=True):
     print("Initializing relays, please wait")
+
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
     for pin in relay_list:
         GPIO.setup(pin, GPIO.OUT)
         GPIO.output(pin, GPIO.HIGH)
@@ -110,10 +114,8 @@ class SwitchPad:
 
 
 def main(argv):
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
     relay_list = [5, 6, 13, 19]
-    # relay_list = [5]
     init_audio(True)
     init_relays(relay_list, False)
     last_input_state = GPIO.input(21)
