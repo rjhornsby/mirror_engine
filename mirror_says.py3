@@ -49,6 +49,7 @@ class FadingText:
     
     def __init__(self, screen, text):
         self.thr = None
+        self.stopping = False
         self.screen = screen
         self.text = text
         self.state = None
@@ -69,44 +70,50 @@ class FadingText:
         if new_state == FadingText.ST_FADEIN:
             self.thr = myThread(0, 'fade_in', self)
             self.thr.start()
-            self.thr.join()
+            # don't join the thread so that new events aren't queued
         elif new_state == FadingText.ST_FADEOUT:
             self.thr = myThread(0, 'fade_out', self)
             self.thr.start()
-            self.thr.join()
         else:
             return
         
+    def stop(self):
+        self.stopping = True
     
     def fade_in(self):
         if self.state == FadingText.ST_FADEIN:
             return
+
+        self.stopping = False
+
         last_state_change = time.time()
-        # state_time = time.time() - last_state_change
-        
+
         while self.alpha < 1.0:
-            # state_time -= FADE_IN_TIME
+            if self.stopping:
+                return
+
             state_time = time.time() - last_state_change
-            print("state_time: {}".format(state_time))
-            # last_state_change = time.time() - state_time
             self.alpha = FADE_IN_EASING(1.0 * state_time / FADE_IN_TIME)
             
             rt = self.t1
             self.draw(rt)
             clock.tick(50)
             
-        # When we reach the max alpha value, set state to ST_FADEIN    
         self.state = FadingText.ST_FADEIN
     
     def fade_out(self):
         if self.state == FadingText.ST_FADEOUT:
             return
+
+        self.stopping = False
+
         last_state_change = time.time()
-        
+
         while self.alpha > 0.0:
+            if self.stopping:
+                return
+
             state_time = time.time() - last_state_change
-            print("state_time: {}".format(state_time))
-            # last_state_change = time.time() - state_time
             self.alpha = 1. - FADE_OUT_EASING(1.0 * state_time / FADE_OUT_TIME)
             
             rt = self.t1
@@ -144,4 +151,8 @@ while not done:
                 fading_text.fade(fading_text.ST_FADEIN)
             elif event.key == pygame.K_DOWN:
                 fading_text.fade(fading_text.ST_FADEOUT)
+            else:
+                fading_text.stop()
+                screen.fill(colors['black'])
+                pygame.display.flip()
                 
