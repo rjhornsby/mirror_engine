@@ -17,12 +17,18 @@ FADE_OUT_TIME = 5
 FADE_IN_EASING = lambda x: x # Linear
 FADE_OUT_EASING = lambda x: x # Linear
 
-fontdir = os.path.dirname(os.path.abspath( __file__))
+fontdir = os.path.join(os.path.dirname(os.path.abspath( __file__)),"data", "fonts")
 
 pygame.init()
 pygame.mouse.set_visible(False)
-
-font = pygame.font.Font(os.path.join(fontdir, "data/fonts", "FloodStd.otf"), 64)
+font_exts = ['.otf', '.ttf']
+fontlib = []
+for file in os.listdir(fontdir):
+    filename, extension = os.path.splitext(file)
+    if extension in font_exts:
+        font = pygame.font.Font(os.path.join(fontdir, file), 64)
+        fontlib.append(font)
+    
 screen = pygame.display.set_mode((1024, 768))
 screen.fill(colors['black'])
 pygame.display.flip()
@@ -58,6 +64,7 @@ class FadingText:
         self.alpha = 0.0
         self.state_time = time.time()
         self.last_state_change = time.time()
+        font = choice(fontlib)
         self.t1 = font.render(text, True, colors['white'])
         width, height = pygame.display.Info().current_w, pygame.display.Info().current_h
         self.t1_rect = self.t1.get_rect(center=(width / 2, height / 2))
@@ -172,6 +179,8 @@ phrases = [
     "phrase6",
 ]
 
+# Randomize the sequence - but don't choose a random phrase from the list each time
+# otherwise, you risk duplicate consecutive phrases
 shuffle(phrases)
 
 phrase_index = 0
