@@ -11,6 +11,11 @@ from random import *
 FADE_IN_TIME = 3
 FADE_OUT_TIME = 2
 
+
+def log(message):
+    print(time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message))
+
+
 class MirrorText:
     def __init__(self):
 
@@ -18,7 +23,9 @@ class MirrorText:
         self.screen = None
         self.phrases = None
 
-        fontdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "fonts")
+        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+
+        fontdir = os.path.join(base_path, "data", "fonts")
         pygame.init()
         pygame.mouse.set_visible(False)
         font_exts = ['.otf', '.ttf']
@@ -28,16 +35,17 @@ class MirrorText:
             if extension in font_exts:
                 self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), 72))
 
-        self.screen = pygame.display.set_mode((1024, 768))
+        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN|pygame.NOFRAME)
         self.screen.fill(FadingText.COLORS['black'])
         pygame.display.flip()
 
-        with open('phrases.json') as phrase_file:
+        with open(os.path.join(base_path, 'phrases.json')) as phrase_file:
             self.phrases = json.load(phrase_file)
 
         # Randomize the sequence - but don't choose a random phrase from the list each time
         # otherwise, you risk duplicate consecutive phrases
         shuffle(self.phrases)
+        log("MirrorText ready!")
 
 
 class FadeThread(threading.Thread):
