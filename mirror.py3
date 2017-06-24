@@ -22,19 +22,19 @@ class Sound:
             filename, extension = os.path.splitext(file)
             if extension in valid_extensions:
                 self.library[file] = sa.WaveObject.from_wave_file(path + file)
-        print('Loaded %s sounds' % (len(self.library)))
+        log('Loaded %s sounds' % (len(self.library)))
 
     def play(self):
         self.mixer.setvolume(100)
         name, sound = random.choice(list(self.library.items()))
-        print('playing %s' % name)
+        log('playing %s' % name)
         self.now_playing = sound.play()
 
     def stop(self):
         if self.is_busy():
-            for i in range(100, 0, -5):
+            for i in range(100, 0, -3):
                 self.mixer.setvolume(i)
-                time.sleep(0.05)
+                time.sleep(0.075)
             self.now_playing.stop()
 
     def is_busy(self):
@@ -44,7 +44,7 @@ class Sound:
 
 
 def init_relays(relay_list, quiet=True):
-    print("Initializing relays, please wait")
+    log("Initializing relays, please wait")
 
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -70,7 +70,7 @@ def init_relays(relay_list, quiet=True):
 
 def init_audio(use_hdmi=False):
     if use_hdmi:
-        print('Audio: using HDMI')
+        log('Audio: using HDMI')
         os.system('amixer cset numid=3 2')
         # This makes no sense. From the command line,
         # there's no 'PCM' control, only 'Master'.
@@ -79,7 +79,7 @@ def init_audio(use_hdmi=False):
         # os.system('amixer sset "Master" 100%')
         os.system('amixer sset "PCM" 100%')
     else:
-        print('Audio: using 3.5mm')
+        log('Audio: using 3.5mm')
         os.system('amixer cset numid=3 1')
         os.system('amixer sset "PCM" 100%')
 
@@ -91,27 +91,33 @@ class SwitchPad:
         self.relay_list = relay_list
 
     def state_changed(self, state):
-        print(time.strftime('%H:%M:%S: ' + str(state)))
+        log("pin status: " + str(state))
         if state == True:
+            # TODO: start mirrortext thread
             if not self.sounds.is_busy():
                 self.sounds.play()
             else:
-                print("Sound already playing")
+                log("Sound already playing")
 
-            time.sleep(0.5)
+            time.sleep(1.5)
             GPIO.output(5, GPIO.LOW)
             time.sleep(2)
             GPIO.output(6, GPIO.LOW)
             time.sleep(2)
             GPIO.output(13, GPIO.LOW)
-#            for pin in self.relay_list:
-#                GPIO.output(pin, GPIO.LOW)
-#                time.sleep(1.0)
         else:
-            for pin in self.relay_list:
-                GPIO.output(pin, GPIO.HIGH)
+            time.sleep(1.5)
+            GPIO.output(6, GPIO.HIGH)
+            time.sleep(1.5)
+            GPIO.output(13, GPIO.HIGH)
             self.sounds.stop()
+            log("last light out")
+            GPIO.output(5, GPIO.HIGH)
 
+            # TODO: stop mirrortext thread
+
+def log(message):
+    print(time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message))
 
 def main(argv):
 
@@ -119,15 +125,16 @@ def main(argv):
     init_audio(True)
     init_relays(relay_list, False)
     last_input_state = GPIO.input(21)
-
     pad = SwitchPad(relay_list)
 
+    # mirror = mirror_display.MirrorText()
+
     try:
-        print("Ready, starting loop")
+        log("Ready, starting loop")
         while True:
             input_state = GPIO.input(21)
             if GPIO.input(21) != last_input_state:
-                time.sleep(0.25) # wait to make sure it really changed
+                time.sleep(0.25)  # wait to make sure it really changed
                 if GPIO.input(21) != last_input_state:
                     last_input_state = GPIO.input(21)
                     pad.state_changed(GPIO.input(21))
