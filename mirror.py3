@@ -7,6 +7,7 @@ import os
 import random
 import simpleaudio as sa
 import alsaaudio
+import threading
 import mirror_display
 
 class Sound:
@@ -88,16 +89,18 @@ class SwitchPad:
 
     def __init__(self, relay_list):
         self.sounds = Sound()
+        self.mirror = mirror_display.MirrorText()
         self.relay_list = relay_list
 
     def state_changed(self, state):
         log("pin status: " + str(state))
         if state == True:
-            # TODO: start mirrortext thread
+
             if not self.sounds.is_busy():
                 self.sounds.play()
             else:
                 log("Sound already playing")
+
 
             time.sleep(1.5)
             GPIO.output(5, GPIO.LOW)
@@ -105,29 +108,34 @@ class SwitchPad:
             GPIO.output(6, GPIO.LOW)
             time.sleep(2)
             GPIO.output(13, GPIO.LOW)
+            self.mirror.run()
+
         else:
+            self.mirror.stop()
             time.sleep(1.5)
             GPIO.output(6, GPIO.HIGH)
             time.sleep(1.5)
             GPIO.output(13, GPIO.HIGH)
+
             self.sounds.stop()
+
             log("last light out")
             GPIO.output(5, GPIO.HIGH)
 
-            # TODO: stop mirrortext thread
+
+
 
 def log(message):
     print(time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message))
+
 
 def main(argv):
 
     relay_list = [5, 6, 13, 19]
     init_audio(True)
-    init_relays(relay_list, False)
+    init_relays(relay_list, quiet=False)
     last_input_state = GPIO.input(21)
     pad = SwitchPad(relay_list)
-
-    # mirror = mirror_display.MirrorText()
 
     try:
         log("Ready, starting loop")

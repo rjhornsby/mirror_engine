@@ -18,15 +18,18 @@ def log(message):
 
 class MirrorText:
     def __init__(self):
-
+        log("MirrorText: init()")
         self.fontlib = []
         self.screen = None
         self.phrases = None
+        self.thr = None
+        self.stopping = False
 
         base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
         fontdir = os.path.join(base_path, "data", "fonts")
         pygame.init()
+
         pygame.mouse.set_visible(False)
         font_exts = ['.otf', '.ttf']
 
@@ -42,17 +45,68 @@ class MirrorText:
         with open(os.path.join(base_path, 'phrases.json')) as phrase_file:
             self.phrases = json.load(phrase_file)
 
+        log("MirrorText ready!")
+
+    def run(self):
+        log("MirrorText: run()")
+        if self.thr is not None:
+            if self.thr.isAlive():
+                return
+        self.stopping = False
+
         # Randomize the sequence - but don't choose a random phrase from the list each time
         # otherwise, you risk duplicate consecutive phrases
         shuffle(self.phrases)
-        log("MirrorText ready!")
+
+        self.thr = MirrorThread(0, 'loop', self)
+        self.thr.start()
+        # self.thr.join()
+
+    def loop(self):
+        log("MirrorText: loop()")
+        phrase_index = 0
+        last_change = 0
+        phrase = self.phrases[phrase_index]
+        fading_text = FadingText(self.screen, self.fontlib, phrase['text'])
+        while True:
+
+            if self.stopping:
+                fading_text.stop()
+                fading_text.fade(FadingText.ST_FADEOUT, 1)
+                return
+
+            if time.time() > phrase['duration'] + last_change:
+                fading_text.fade(FadingText.ST_FADEOUT, FADE_OUT_TIME)
+                # Next
+                phrase_index += 1
+                if phrase_index >= len(self.phrases):
+                    phrase_index = 0
+
+                phrase = self.phrases[phrase_index]
+                fading_text = FadingText(self.screen, self.fontlib, phrase['text'])
+                last_change = time.time()
+                fading_text.fade(FadingText.ST_FADEIN, FADE_IN_TIME)
+
+    def stop(self):
+        self.stopping = True
+
+
+class MirrorThread(threading.Thread):
+    def __init__(self, thread_id, name, mirror):
+        threading.Thread.__init__(self)
+        self.threadID = thread_id
+        self.name = name
+        self.mirror = mirror
+
+    def run(self):
+        self.mirror.loop()
 
 
 class FadeThread(threading.Thread):
 
-    def __init__(self, threadID, name, fading_text, fade_interval):
+    def __init__(self, thread_id, name, fading_text, fade_interval):
         threading.Thread.__init__(self)
-        self.threadID = threadID
+        self.threadID = thread_id
         self.name = name
         self.fading_text = fading_text
         self.fade_interval = fade_interval
@@ -101,10 +155,13 @@ class FadingText:
         if direction == FadingText.ST_FADEIN:
             self.thr = FadeThread(0, 'fade_in', self, fade_interval)
             self.thr.start()
+            self.thr.join()
             # don't join the thread so that new events aren't queued
         elif direction == FadingText.ST_FADEOUT:
             self.thr = FadeThread(0, 'fade_out', self, fade_interval)
             self.thr.start()
+            # join this so it blocks until finished(?)
+            self.thr.join()
         else:
             return
         
@@ -166,6 +223,7 @@ class FadingText:
     def predraw(self):
         # see http://pygame.org/wiki/TextWrap
         text = self.text
+        log("text: " + text)
         y = 0
 
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
@@ -197,8 +255,6 @@ class FadingText:
             text = text[i:]
 
         self.position = self.random_position(longest_line_length, y)
-
-        print("random position: {}".format(self.position))
 
         return text
 
@@ -245,35 +301,36 @@ class FadingText:
 def main():
 
     mirror = MirrorText()
-    done = False
-
-    phrase_index = 0
-    fading_text = FadingText(mirror.screen, mirror.fontlib, mirror.phrases[phrase_index]['text'])
-
-    while not done:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                done = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
-                    fading_text.stop
-                    done = True
-                elif event.key == pygame.K_UP:
-                    fading_text.fade(fading_text.ST_FADEIN, 3)
-                elif event.key == pygame.K_DOWN:
-                    fading_text.fade(fading_text.ST_FADEOUT, 1)
-                elif event.key == pygame.K_b:
-                    print("Fast fade out")
-                    fading_text.fade(fading_text.ST_FADEOUT, 1)
-                elif event.key == pygame.K_SPACE:
-                    phrase_index += 1
-                    if phrase_index >= len(mirror.phrases):
-                        phrase_index = 0
-                    fading_text.stop()
-                    fading_text = FadingText(mirror.screen, mirror.fontlib, mirror.phrases[phrase_index]['text'])  # create a new one
-                    fading_text.fade(fading_text.ST_FADEIN, 3)
-                else:
-                    fading_text.stop()
+    mirror.run()
+    # done = False
+    #
+    # phrase_index = 0
+    # fading_text = FadingText(mirror.screen, mirror.fontlib, mirror.phrases[phrase_index]['text'])
+    #
+    # while not done:
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.QUIT:
+    #             done = True
+    #         if event.type == pygame.KEYDOWN:
+    #             if event.key == pygame.K_ESCAPE:
+    #                 fading_text.stop
+    #                 done = True
+    #             elif event.key == pygame.K_UP:
+    #                 fading_text.fade(fading_text.ST_FADEIN, 3)
+    #             elif event.key == pygame.K_DOWN:
+    #                 fading_text.fade(fading_text.ST_FADEOUT, 1)
+    #             elif event.key == pygame.K_b:
+    #                 print("Fast fade out")
+    #                 fading_text.fade(fading_text.ST_FADEOUT, 1)
+    #             elif event.key == pygame.K_SPACE:
+    #                 phrase_index += 1
+    #                 if phrase_index >= len(mirror.phrases):
+    #                     phrase_index = 0
+    #                 fading_text.stop
+    #                 fading_text = FadingText(mirror.screen, mirror.fontlib, mirror.phrases[phrase_index]['text'])  # create a new one
+    #                 fading_text.fade(fading_text.ST_FADEIN, 3)
+    #             else:
+    #                 fading_text.stop()
 
 if __name__ == "__main__":
     main()
