@@ -17,17 +17,16 @@ def log(message):
 
 
 class MirrorText:
-    def __init__(self):
+    def __init__(self, fullscreen=True):
         log("MirrorText: init()")
         self.fontlib = []
         self.screen = None
         self.phrases = None
         self.thr = None
         self.stopping = False
+        self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
-        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-
-        fontdir = os.path.join(base_path, "data", "fonts")
+        fontdir = os.path.join(self.base_path, "data", "fonts")
         pygame.init()
 
         pygame.mouse.set_visible(False)
@@ -37,15 +36,56 @@ class MirrorText:
             filename, extension = os.path.splitext(file)
             if extension in font_exts:
                 self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), 72))
+        if fullscreen:
+            pygame_screen_mode = pygame.FULLSCREEN|pygame.NOFRAME
+            pygame_screen_res = (0, 0)
+        else:
+            pygame_screen_mode = 0
+            pygame_screen_res = (1024, 768)
 
-        self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN|pygame.NOFRAME)
+        self.screen = pygame.display.set_mode(pygame_screen_res, pygame_screen_mode)
         self.screen.fill(FadingText.COLORS['black'])
         pygame.display.flip()
 
-        with open(os.path.join(base_path, 'phrases.json')) as phrase_file:
+        with open(os.path.join(self.base_path, 'phrases.json')) as phrase_file:
             self.phrases = json.load(phrase_file)
 
         log("MirrorText ready!")
+
+    def special(self, special_date):  # easter egg
+        duration = 40
+        stop_time = time.time() + duration
+        try:
+            if time.strftime('%m%d') != special_date:
+                return
+            if os.path.isfile(os.path.join(self.base_path, 'message_delivered.lock')):
+                return
+            special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "special.ttf"), 72)]
+            clock_font = pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "Gotham-Medium.otf"), 16)
+            fading_text = FadingText(self.screen, special_fontlib, "Happy birthday Heather! :)", True)
+            fading_text.fade(FadingText.ST_FADEIN, 2)
+            self.screen.fill(FadingText.COLORS['black'])
+            while time.time() < stop_time:
+                for event in pygame.event.get():
+                    pass
+
+                time_remaining = round(stop_time - time.time(), 1)
+                clock_label = clock_font.render(str(time_remaining), True, FadingText.COLORS['white'], FadingText.COLORS['black'])
+                rec = clock_label.get_rect()
+                pygame.draw.rect(fading_text.drawing_surface, FadingText.COLORS['black'], (0, 0, 120, 24), 0)
+                fading_text.drawing_surface.blit(clock_label, rec)
+                self.screen.blit(fading_text.drawing_surface, (0, 0))
+
+                pygame.display.flip()
+
+            fading_text.fade(FadingText.ST_FADEOUT, 1)
+
+            # write a lock file so we never do this again
+            # lock_file = open(os.path.join(self.base_path, 'message_delivered.lock'), 'w')
+            # lock_file.write("")
+            # lock_file.close()
+        finally:
+           pass
 
     def run(self):
         log("MirrorText: run()")
@@ -133,11 +173,12 @@ class FadingText:
         "gray": pygame.Color(127, 127, 127)
     }
 
-    def __init__(self, screen, fontlib, text):
+    def __init__(self, screen, fontlib, text, center_text=False):
         self.thr = None
         self.stopping = False
         self.screen = screen
         self.text = text
+        self.center_text = center_text
         self.state = None
         self.alpha = 0.0
         self.position = (0, 0)  # Overwritten in predraw()
@@ -145,6 +186,7 @@ class FadingText:
         self.last_state_change = time.time()
         self.font = choice(fontlib)
         self.rendered_text = []
+        self.drawing_surface = None
         self.predraw()
 
     def fade(self, direction, fade_interval):
@@ -164,7 +206,7 @@ class FadingText:
             self.thr.join()
         else:
             return
-        
+
     def stop(self):
         self.stopping = True
     
@@ -253,8 +295,10 @@ class FadingText:
             self.rendered_text.append(rendered_line)
             y += font_height + FadingText.LINE_SPACING
             text = text[i:]
-
-        self.position = self.random_position(longest_line_length, y)
+        if self.center_text:
+            self.position = self.centered(longest_line_length, y)
+        else:
+            self.position = self.random_position(longest_line_length, y)
 
         return text
 
@@ -266,6 +310,7 @@ class FadingText:
         # clear the screen
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
         s2 = pygame.surface.Surface((screen_w, screen_h))
+        self.drawing_surface = s2
         s2.set_alpha(255 * self.alpha)
         self.screen.fill(FadingText.COLORS['black'])
 
@@ -275,6 +320,14 @@ class FadingText:
 
         self.screen.blit(s2, (0, 0))  # always draw onto 0,0 of the screen surface
         pygame.display.flip()
+
+    def centered(self, r_width, r_height):
+
+        screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
+        x = screen_w / 2 - r_width / 2
+        y = screen_h / 2 - r_height / 2
+
+        return x, y
 
     def random_position(self, r_width, r_height):
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
@@ -300,7 +353,8 @@ class FadingText:
 
 def main():
 
-    mirror = MirrorText()
+    mirror = MirrorText(fullscreen=False)
+    mirror.special()
     mirror.run()
     # done = False
     #

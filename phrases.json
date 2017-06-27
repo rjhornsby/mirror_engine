@@ -1,14 +1,34 @@
 [
-    {
-        "text": "you are beautiful",
-        "duration": 10
-    },
-    {
-        "text": "you are fearfully and wonderfully made",
-        "duration": 15
-    },
-    {
-        "text": "you are loved",
-        "duration": 8
-    }
+  {
+    "text": "you are beautiful",
+    "duration": 2
+  },
+  {
+    "text": "you are fearfully and wonderfully made",
+    "duration": 4
+  },
+  {
+    "text": "you are loved",
+    "duration": 2
+  },
+  {
+    "text": "His grace is sufficient for you",
+    "duration": 3
+  },
+  {
+    "text": "Be bold and courageous",
+    "duration": 2
+  },
+  {
+    "text": "You are a child of the risen king",
+    "duration": 3
+  },
+  {
+    "text": "You are enough",
+    "duration": 2
+  },
+  {
+    "text": "You are strong",
+    "duration": 2
+  }
 ]

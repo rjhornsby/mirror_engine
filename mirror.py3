@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 
 import RPi.GPIO as GPIO
-import time
-import sys
-import os
+import os, sys, time
 import random
 import simpleaudio as sa
 import alsaaudio
-import threading
 import mirror_display
+import pygame
 
 class Sound:
     def __init__(self):
@@ -101,7 +99,6 @@ class SwitchPad:
             else:
                 log("Sound already playing")
 
-
             time.sleep(1.5)
             GPIO.output(5, GPIO.LOW)
             time.sleep(2)
@@ -123,8 +120,6 @@ class SwitchPad:
             GPIO.output(5, GPIO.HIGH)
 
 
-
-
 def log(message):
     print(time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message))
 
@@ -137,9 +132,24 @@ def main(argv):
     last_input_state = GPIO.input(21)
     pad = SwitchPad(relay_list)
 
+    special_date = "0627"
+    if time.strftime('%m%d') == special_date:
+        mirror = mirror_display.MirrorText()
+        mirror.special(special_date)
+
+    done = False
+
     try:
         log("Ready, starting loop")
-        while True:
+        while not done:
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    done = True
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        done = True
+
             input_state = GPIO.input(21)
             if GPIO.input(21) != last_input_state:
                 time.sleep(0.25)  # wait to make sure it really changed
