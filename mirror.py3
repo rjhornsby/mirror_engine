@@ -8,38 +8,25 @@ import alsaaudio
 import mirror_display
 import pygame
 
+
 class Sound:
     def __init__(self):
-        self.mixer = alsaaudio.Mixer('PCM')
-        self.channel = alsaaudio.MIXER_CHANNEL_ALL
-        valid_extensions = ['.wav']
+        pygame.mixer.init()
+        valid_extensions = ['.mp3']
         self.library = {}
         self.now_playing = None
+        self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
-        path = 'audio/'
-        for file in os.listdir(path):
-            filename, extension = os.path.splitext(file)
-            if extension in valid_extensions:
-                self.library[file] = sa.WaveObject.from_wave_file(path + file)
-        log('Loaded %s sounds' % (len(self.library)))
-
+        audio_path = os.path.join(self.base_path, 'audio')
+        pygame.mixer.music.load(os.path.join(audio_path, 'beauty_theme_1s_delay.mp3'))
     def play(self):
-        self.mixer.setvolume(100)
-        name, sound = random.choice(list(self.library.items()))
-        log('playing %s' % name)
-        self.now_playing = sound.play()
+        self.now_playing = pygame.mixer.music.play(-1)
 
     def stop(self):
-        if self.is_busy():
-            for i in range(100, 0, -3):
-                self.mixer.setvolume(i)
-                time.sleep(0.075)
-            self.now_playing.stop()
+        pygame.mixer.music.fadeout(3000)
 
     def is_busy(self):
-        if self.now_playing is None:
-            return False
-        return self.now_playing.is_playing()
+        return pygame.mixer.music.get_busy()
 
 
 def init_relays(relay_list, quiet=True):
@@ -132,7 +119,7 @@ def main(argv):
     last_input_state = GPIO.input(21)
     pad = SwitchPad(relay_list)
 
-    special_date = "0627"
+    special_date = "0702"
     if time.strftime('%m%d') == special_date:
         mirror = mirror_display.MirrorText()
         mirror.special(special_date)
