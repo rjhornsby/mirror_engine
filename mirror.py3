@@ -17,15 +17,20 @@ class Sound:
         self.now_playing = None
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
-        audio_path = os.path.join(self.base_path, 'audio')
-        pygame.mixer.music.load(os.path.join(audio_path, 'beauty_theme_1s_delay.mp3'))
+        self.audio_path = os.path.join(self.base_path, 'audio')
+        pygame.mixer.music.load(os.path.join(self.audio_path, 'beauty_theme_1s_delay.mp3'))
+
     def play(self):
+        pygame.mixer.music.load(os.path.join(self.audio_path, 'beauty_theme_1s_delay.mp3'))
         self.now_playing = pygame.mixer.music.play(-1)
 
-    def stop(self):
+    @staticmethod
+    def stop():
         pygame.mixer.music.fadeout(3000)
+        pygame.mixer.music.stop()
 
-    def is_busy(self):
+    @staticmethod
+    def is_busy():
         return pygame.mixer.music.get_busy()
 
 
@@ -151,5 +156,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv)
-
-# GPIO.cleanup()

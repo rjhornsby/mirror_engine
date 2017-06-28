@@ -198,7 +198,6 @@ class FadingText:
             self.thr = FadeThread(0, 'fade_in', self, fade_interval)
             self.thr.start()
             self.thr.join()
-            # don't join the thread so that new events aren't queued
         elif direction == FadingText.ST_FADEOUT:
             self.thr = FadeThread(0, 'fade_out', self, fade_interval)
             self.thr.start()
