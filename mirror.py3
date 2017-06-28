@@ -27,6 +27,7 @@ class Sound:
     @staticmethod
     def stop():
         pygame.mixer.music.fadeout(3000)
+        time.sleep(3)
         pygame.mixer.music.stop()
 
     @staticmethod
