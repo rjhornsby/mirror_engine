@@ -76,7 +76,8 @@ class MirrorText:
             if time.strftime('%m%d') != special_date:
                 return
 
-            special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "special.ttf"), 48)]
+            # special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "special.ttf"), 48)]
+            special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "FloodStd.otf"), 48)]
             # clock_font = pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "Gotham-Medium.otf"), 16)
             # fading_text = FadingText(self.screen, special_fontlib, "Happy birthday Heather! :)", True)
             message_text = message['message'] + "\n\n" + "- " + message['author']

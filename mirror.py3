@@ -24,10 +24,15 @@ class Sound:
         pygame.mixer.music.load(os.path.join(self.audio_path, 'beauty_theme_1s_delay.mp3'))
         self.now_playing = pygame.mixer.music.play(-1)
 
+    # TODO: coordinate timing between special messages and music
+    def play_special(self):
+        pygame.mixer.music.load(os.path.join(self.audio_path, 'special', 'special.mp3'))
+        self.now_playing = pygame.mixer.music.play()
+
     @staticmethod
-    def stop():
-        pygame.mixer.music.fadeout(3000)
-        time.sleep(3)
+    def stop(fade_delay=3000):
+        pygame.mixer.music.fadeout(fade_delay)
+        time.sleep(fade_delay / 1000)
         pygame.mixer.music.stop()
 
     @staticmethod
@@ -125,10 +130,14 @@ def main(argv):
     last_input_state = GPIO.input(21)
     pad = SwitchPad(relay_list)
 
-    special_date = "0702"
+    special_date = "0630"
     if time.strftime('%m%d') == special_date:
+        log("Playing special messages")
+        sound = Sound()
+        sound.play_special()
         mirror = mirror_display.MirrorText()
         mirror.special(special_date)
+        sound.stop(6000)
 
     done = False
 
