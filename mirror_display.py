@@ -52,17 +52,33 @@ class MirrorText:
 
         log("MirrorText ready!")
 
+    def load_special_messages(self):
+        special_messages = []
+        messages_path = os.path.join(self.base_path, 'special_messages')
+        for file in os.listdir(messages_path):
+            filename, extension = os.path.splitext(file)
+            if extension == '.msg':
+                log("opening message file " + file)
+                fh = open(os.path.join(messages_path, file), 'r')
+                message = fh.read()
+                special_messages.append(message)
+        return special_messages
+
     def special(self, special_date):  # easter egg
-        duration = 40
-        stop_time = time.time() + duration
-        try:
+
+        messages = self.load_special_messages()
+
+        duration = 3
+        for message in messages:
+            stop_time = time.time() + duration
+            # try:
             if time.strftime('%m%d') != special_date:
                 return
-            if os.path.isfile(os.path.join(self.base_path, 'message_delivered.lock')):
-                return
-            special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "special.ttf"), 72)]
-            clock_font = pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "Gotham-Medium.otf"), 16)
-            fading_text = FadingText(self.screen, special_fontlib, "Happy birthday Heather! :)", True)
+
+            special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "special.ttf"), 48)]
+            # clock_font = pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "Gotham-Medium.otf"), 16)
+            # fading_text = FadingText(self.screen, special_fontlib, "Happy birthday Heather! :)", True)
+            fading_text = FadingText(self.screen, special_fontlib, message, True)
             fading_text.fade(FadingText.ST_FADEIN, 2)
             self.screen.fill(FadingText.COLORS['black'])
             while time.time() < stop_time:
@@ -70,22 +86,22 @@ class MirrorText:
                     pass
 
                 time_remaining = round(stop_time - time.time(), 1)
-                clock_label = clock_font.render(str(time_remaining), True, FadingText.COLORS['white'], FadingText.COLORS['black'])
-                rec = clock_label.get_rect()
+                # clock_label = clock_font.render(str(time_remaining), True, FadingText.COLORS['white'], FadingText.COLORS['black'])
+                # rec = clock_label.get_rect()
                 pygame.draw.rect(fading_text.drawing_surface, FadingText.COLORS['black'], (0, 0, 120, 24), 0)
-                fading_text.drawing_surface.blit(clock_label, rec)
+                # fading_text.drawing_surface.blit(clock_label, rec)
                 self.screen.blit(fading_text.drawing_surface, (0, 0))
 
                 pygame.display.flip()
 
             fading_text.fade(FadingText.ST_FADEOUT, 1)
 
-            # write a lock file so we never do this again
-            # lock_file = open(os.path.join(self.base_path, 'message_delivered.lock'), 'w')
-            # lock_file.write("")
-            # lock_file.close()
-        finally:
-           pass
+        # write a lock file so we never do this again
+        # lock_file = open(os.path.join(self.base_path, 'message_delivered.lock'), 'w')
+        # lock_file.write("")
+        # lock_file.close()
+        # finally:
+        #   pass
 
     def run(self):
         log("MirrorText: run()")
@@ -163,7 +179,7 @@ class FadingText:
     ST_FADEIN = 0
     ST_FADEOUT = 1
     LINE_SPACING = -2
-    MARGIN = 0.05
+    MARGIN = 0.10
     FADE_IN_EASING = lambda x: x  # Linear
     FADE_OUT_EASING = lambda x: x  # Linear
 
@@ -263,43 +279,50 @@ class FadingText:
     # so that we only have to do this work one time
     def predraw(self):
         # see http://pygame.org/wiki/TextWrap
-        text = self.text
-        log("text: " + text)
+        lines = self.text.splitlines()
         y = 0
-
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
 
         screen_w = int(screen_w * (1 - FadingText.MARGIN))
         screen_h = int(screen_h * (1 - FadingText.MARGIN))
 
         font_height = self.font.size('Tg')[1]
+        line_spacing = font_height + FadingText.LINE_SPACING
         longest_line_length = 0
 
-        while text:
-            i = 1
+        while lines:
             if y + font_height > screen_h:
                 break
 
-            while self.font.size(text[:i])[0] < screen_w and i < len(text):
-                i += 1
+            line = lines.pop(0)
 
-            if i < len(text):
-                i = text.rfind(" ", 0, i) + 1
+            # render a blank line
+            if len(line) == 0:
+                rendered_line = self.font.render("", True, FadingText.COLORS['white'])
+                self.rendered_text.append(rendered_line)
+                y += line_spacing
 
-            rendered_line = self.font.render(text[:i], True, FadingText.COLORS['white'])
+            while line:
+                i = 1
 
-            if rendered_line.get_rect().width > longest_line_length:
-                longest_line_length = rendered_line.get_rect().width
+                while self.font.size(line[:i])[0] < screen_w and i < len(line):
+                    i += 1
 
-            self.rendered_text.append(rendered_line)
-            y += font_height + FadingText.LINE_SPACING
-            text = text[i:]
-        if self.center_text:
-            self.position = self.centered(longest_line_length, y)
-        else:
-            self.position = self.random_position(longest_line_length, y)
+                if i < len(line):
+                    i = line.rfind(" ", 0, i) + 1
 
-        return text
+                rendered_line = self.font.render(line[:i], True, FadingText.COLORS['white'])
+
+                if rendered_line.get_rect().width > longest_line_length:
+                    longest_line_length = rendered_line.get_rect().width
+
+                self.rendered_text.append(rendered_line)
+                y += line_spacing
+                line = line[i:]
+            if self.center_text:
+                self.position = self.centered(longest_line_length, y)
+            else:
+                self.position = self.random_position(longest_line_length, y)
 
     def draw(self):
 
@@ -353,7 +376,7 @@ class FadingText:
 def main():
 
     mirror = MirrorText(fullscreen=False)
-    mirror.special()
+    mirror.special('0630')
     mirror.run()
     # done = False
     #
