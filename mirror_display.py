@@ -53,24 +53,25 @@ class MirrorText:
         log("MirrorText ready!")
 
     def load_special_messages(self):
-        special_messages = []
-        messages_path = os.path.join(self.base_path, 'special_messages')
-        for file in os.listdir(messages_path):
-            filename, extension = os.path.splitext(file)
-            if extension == '.msg':
-                log("opening message file " + file)
-                fh = open(os.path.join(messages_path, file), 'r')
-                message = fh.read()
-                special_messages.append(message)
+        with open(os.path.join(self.base_path, 'special_messages', 'messages.json')) as messages_file:
+            special_messages = json.load(messages_file)
+        # special_messages = []
+        # messages_path = os.path.join(self.base_path, 'special_messages')
+        # for file in os.listdir(messages_path):
+        #     filename, extension = os.path.splitext(file)
+        #     if extension == '.msg':
+        #         log("opening message file " + file)
+        #         fh = open(os.path.join(messages_path, file), 'r')
+        #         message = fh.read()
+        #         special_messages.append(message)
         return special_messages
 
     def special(self, special_date):  # easter egg
 
         messages = self.load_special_messages()
 
-        duration = 3
         for message in messages:
-            stop_time = time.time() + duration
+            stop_time = time.time() + message['duration']
             # try:
             if time.strftime('%m%d') != special_date:
                 return
@@ -78,7 +79,8 @@ class MirrorText:
             special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "special.ttf"), 48)]
             # clock_font = pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "Gotham-Medium.otf"), 16)
             # fading_text = FadingText(self.screen, special_fontlib, "Happy birthday Heather! :)", True)
-            fading_text = FadingText(self.screen, special_fontlib, message, True)
+            message_text = message['message'] + "\n\n" + "- " + message['author']
+            fading_text = FadingText(self.screen, special_fontlib, message_text, True)
             fading_text.fade(FadingText.ST_FADEIN, 2)
             self.screen.fill(FadingText.COLORS['black'])
             while time.time() < stop_time:
