@@ -8,7 +8,6 @@ import alsaaudio
 import mirror_display
 import pygame
 
-
 class Sound:
     def __init__(self):
         pygame.mixer.init()
@@ -119,7 +118,11 @@ class SwitchPad:
 
 
 def log(message):
-    print(time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message))
+    log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
+    print(log_message)
+    log_fh = open(os.path.abspath(__file__) + '.log', 'a')
+    log_fh.write(log_message + "\n")
+    log_fh.close()
 
 
 def main(argv):
@@ -132,12 +135,20 @@ def main(argv):
 
     special_date = "0630"
     if time.strftime('%m%d') == special_date:
-        log("Playing special messages")
-        sound = Sound()
-        sound.play_special()
-        mirror = mirror_display.MirrorText()
-        mirror.special(special_date)
-        sound.stop(6000)
+        try:
+            log("Playing special messages")
+            sound = Sound()
+            sound.play_special()
+            GPIO.output(5, GPIO.LOW)
+            time.sleep(1)
+            mirror = mirror_display.MirrorText()
+            mirror.run(mode='special')
+        finally:
+            sound.stop(6000)
+            time.sleep(1)
+            GPIO.output(5, GPIO.HIGH)
+            time.sleep(1)
+            GPIO.output(13, GPIO.HIGH)
 
     done = False
 
