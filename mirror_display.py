@@ -13,7 +13,11 @@ FADE_OUT_TIME = 2
 
 
 def log(message):
-    print(time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message))
+    log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
+    print(log_message)
+    log_fh = open(os.path.abspath(__file__) + '.log', 'a')
+    log_fh.write(log_message + "\n")
+    log_fh.close()
 
 
 class MirrorText:
@@ -36,6 +40,9 @@ class MirrorText:
             filename, extension = os.path.splitext(file)
             if extension in font_exts:
                 self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), 72))
+
+        log("loaded " + str(len(self.fontlib)) + " fonts")
+
         if fullscreen:
             pygame_screen_mode = pygame.FULLSCREEN|pygame.NOFRAME
             pygame_screen_res = (0, 0)
@@ -43,10 +50,13 @@ class MirrorText:
             pygame_screen_mode = 0
             pygame_screen_res = (1024, 768)
 
+        log("setting screen mode")
         self.screen = pygame.display.set_mode(pygame_screen_res, pygame_screen_mode)
         self.screen.fill(FadingText.COLORS['black'])
+        log("flipping screen")
         pygame.display.flip()
 
+        log("loading phrases")
         with open(os.path.join(self.base_path, 'phrases.json')) as phrase_file:
             self.phrases = json.load(phrase_file)
 
@@ -55,58 +65,39 @@ class MirrorText:
     def load_special_messages(self):
         with open(os.path.join(self.base_path, 'special_messages', 'messages.json')) as messages_file:
             special_messages = json.load(messages_file)
-        # special_messages = []
-        # messages_path = os.path.join(self.base_path, 'special_messages')
-        # for file in os.listdir(messages_path):
-        #     filename, extension = os.path.splitext(file)
-        #     if extension == '.msg':
-        #         log("opening message file " + file)
-        #         fh = open(os.path.join(messages_path, file), 'r')
-        #         message = fh.read()
-        #         special_messages.append(message)
+
         return special_messages
 
-    def special(self, special_date):  # easter egg
+    def special(self):  # easter egg
 
         messages = self.load_special_messages()
-
+        special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "FloodStd.otf"), 48)]
         for message in messages:
             stop_time = time.time() + message['duration']
             # try:
-            if time.strftime('%m%d') != special_date:
-                return
-
-            # special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "special.ttf"), 48)]
-            special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "FloodStd.otf"), 48)]
-            # clock_font = pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "Gotham-Medium.otf"), 16)
-            # fading_text = FadingText(self.screen, special_fontlib, "Happy birthday Heather! :)", True)
+            log("special message - " + message['author'])
             message_text = message['message'] + "\n\n" + "- " + message['author']
             fading_text = FadingText(self.screen, special_fontlib, message_text, True)
             fading_text.fade(FadingText.ST_FADEIN, 2)
             self.screen.fill(FadingText.COLORS['black'])
             while time.time() < stop_time:
                 for event in pygame.event.get():
-                    pass
+                    if event.type == pygame.QUIT:
+                        self.screen.fill(FadingText.COLORS['black'])
+                        return
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_ESCAPE:
+                            self.screen.fill(FadingText.COLORS['black'])
+                            return
 
-                time_remaining = round(stop_time - time.time(), 1)
-                # clock_label = clock_font.render(str(time_remaining), True, FadingText.COLORS['white'], FadingText.COLORS['black'])
-                # rec = clock_label.get_rect()
                 pygame.draw.rect(fading_text.drawing_surface, FadingText.COLORS['black'], (0, 0, 120, 24), 0)
-                # fading_text.drawing_surface.blit(clock_label, rec)
                 self.screen.blit(fading_text.drawing_surface, (0, 0))
 
                 pygame.display.flip()
 
             fading_text.fade(FadingText.ST_FADEOUT, 1)
 
-        # write a lock file so we never do this again
-        # lock_file = open(os.path.join(self.base_path, 'message_delivered.lock'), 'w')
-        # lock_file.write("")
-        # lock_file.close()
-        # finally:
-        #   pass
-
-    def run(self):
+    def run(self, mode='normal'):
         log("MirrorText: run()")
         if self.thr is not None:
             if self.thr.isAlive():
@@ -117,7 +108,11 @@ class MirrorText:
         # otherwise, you risk duplicate consecutive phrases
         shuffle(self.phrases)
 
-        self.thr = MirrorThread(0, 'loop', self)
+        if mode == 'normal':
+            self.thr = MirrorThread(0, 'loop', self)
+        else:
+            self.thr = MirrorThread(0, 'special', self)
+
         self.thr.start()
         # self.thr.join()
 
@@ -158,7 +153,10 @@ class MirrorThread(threading.Thread):
         self.mirror = mirror
 
     def run(self):
-        self.mirror.loop()
+        if self.name == 'special':
+            self.mirror.special()
+        else:
+            self.mirror.loop()
 
 
 class FadeThread(threading.Thread):
