@@ -22,6 +22,7 @@ def log(message):
 
 class MirrorText:
     def __init__(self, fullscreen=True):
+        # TODO: implement fullscreen argument
         log("MirrorText: init()")
         self.fontlib = []
         self.screen = None
@@ -377,7 +378,7 @@ class FadingText:
 def main():
 
     mirror = MirrorText(fullscreen=False)
-    mirror.special('0630')
+    mirror.special()
     mirror.run()
     # done = False
     #

@@ -1,17 +1,14 @@
-#!/usr/bin/python3
+#!/usr/bin/env python
 
 import RPi.GPIO as GPIO
 import os, sys, time
-import random
-import simpleaudio as sa
-import alsaaudio
 import mirror_display
 import pygame
+
 
 class Sound:
     def __init__(self):
         pygame.mixer.init()
-        valid_extensions = ['.mp3']
         self.library = {}
         self.now_playing = None
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
@@ -145,7 +142,7 @@ def play_special():
         sound = Sound()
         sound.play_special()
         GPIO.output(5, GPIO.LOW)
-        mirror = mirror_display.MirrorText()
+        mirror = mirror_display.MirrorText(fullscreen=False)
         mirror.run(mode='special')
         while mirror.thr.isAlive():
             pass
@@ -156,6 +153,7 @@ def play_special():
         GPIO.output(5, GPIO.HIGH)
         time.sleep(1)
         GPIO.output(13, GPIO.HIGH)
+
 
 def main(argv):
 

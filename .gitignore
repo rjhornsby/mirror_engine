@@ -1,3 +1,5 @@
+__pycache__
+*.log
 audio/*
 .idea
 .DS_Store
