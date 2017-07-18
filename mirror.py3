@@ -20,11 +20,6 @@ class Sound:
         pygame.mixer.music.load(os.path.join(self.audio_path, 'beauty_theme_1s_delay.mp3'))
         self.now_playing = pygame.mixer.music.play(-1)
 
-    # TODO: coordinate timing between special messages and music
-    def play_special(self):
-        pygame.mixer.music.load(os.path.join(self.audio_path, 'special', 'special.mp3'))
-        self.now_playing = pygame.mixer.music.play()
-
     @staticmethod
     def stop(fade_delay=3000):
         pygame.mixer.music.fadeout(fade_delay)
@@ -40,7 +35,6 @@ def init_relays(relay_list, quiet=True):
     log("Initializing relays, please wait")
 
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(20, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     for pin in relay_list:
@@ -54,11 +48,11 @@ def init_relays(relay_list, quiet=True):
             GPIO.output(pin, GPIO.HIGH)
             time.sleep(0)
 
-        for pin in relay_list: # all on
+        for pin in relay_list:  # all on
             GPIO.output(pin, GPIO.LOW)
         time.sleep(1.0)
 
-        for pin in relay_list: # all off
+        for pin in relay_list:  # all off
             GPIO.output(pin, GPIO.HIGH)
 
 
@@ -107,24 +101,23 @@ class SwitchPad:
                 log("Sound already playing")
 
             time.sleep(1.5)
-            GPIO.output(5, GPIO.LOW)
+            GPIO.output(5, GPIO.LOW)  # relay 1
             time.sleep(2)
-            GPIO.output(6, GPIO.LOW)
+            GPIO.output(6, GPIO.LOW)  # relay 2
             time.sleep(2)
-            GPIO.output(13, GPIO.LOW)
+            GPIO.output(13, GPIO.LOW)  # relay 3
             self.mirror.run()
 
         else:
             self.mirror.stop()
             time.sleep(1.5)
-            GPIO.output(6, GPIO.HIGH)
+            GPIO.output(6, GPIO.HIGH)  # relay 2
             time.sleep(1.5)
-            GPIO.output(13, GPIO.HIGH)
+            GPIO.output(13, GPIO.HIGH)  # relay 3
 
             self.sound.stop()
 
-            log("last light out")
-            GPIO.output(5, GPIO.HIGH)
+            GPIO.output(5, GPIO.HIGH)  # relay 1
 
 
 def log(message):
@@ -135,42 +128,13 @@ def log(message):
     log_fh.close()
 
 
-def play_special():
-
-    try:
-        log("Playing special messages")
-        sound = Sound()
-        sound.play_special()
-        GPIO.output(5, GPIO.LOW)
-        mirror = mirror_display.MirrorText(fullscreen=False)
-        mirror.run(mode='special')
-        while mirror.thr.isAlive():
-            pass
-    finally:
-        sound.stop(6000)
-        mirror.stop()
-        time.sleep(1)
-        GPIO.output(5, GPIO.HIGH)
-        time.sleep(1)
-        GPIO.output(13, GPIO.HIGH)
-
-
 def main(argv):
-
-    pygame.quit()
 
     relay_list = [5, 6, 13, 19]
     init_audio(True)
     init_relays(relay_list, quiet=False)
     last_input_state = GPIO.input(21)
     pad = SwitchPad(relay_list)
-
-    # do this at least once
-    if not os.path.isfile('special_message_played'):
-        play_special()
-        fh = open('special_message_played', 'a')
-        fh.write(time.strftime('[%a %Y-%m-%d %H:%M:%S]'))
-        fh.close()
 
     done = False
 
@@ -184,10 +148,6 @@ def main(argv):
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
                         done = True
-
-            if GPIO.input(20) == 0:
-                pad.stop()
-                play_special()
 
             if GPIO.input(21) != last_input_state:
                 time.sleep(0.25)  # wait to make sure it really changed

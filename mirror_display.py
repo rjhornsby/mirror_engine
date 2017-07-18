@@ -63,42 +63,7 @@ class MirrorText:
 
         log("MirrorText ready!")
 
-    def load_special_messages(self):
-        with open(os.path.join(self.base_path, 'special_messages', 'messages.json')) as messages_file:
-            special_messages = json.load(messages_file)
-
-        return special_messages
-
-    def special(self):  # easter egg
-
-        messages = self.load_special_messages()
-        special_fontlib = [pygame.font.Font(os.path.join(self.base_path, "data", "fonts", "FloodStd.otf"), 48)]
-        for message in messages:
-            stop_time = time.time() + message['duration']
-            # try:
-            log("special message - " + message['author'])
-            message_text = message['message'] + "\n\n" + "- " + message['author']
-            fading_text = FadingText(self.screen, special_fontlib, message_text, True)
-            fading_text.fade(FadingText.ST_FADEIN, 2)
-            self.screen.fill(FadingText.COLORS['black'])
-            while time.time() < stop_time:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.screen.fill(FadingText.COLORS['black'])
-                        return
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_ESCAPE:
-                            self.screen.fill(FadingText.COLORS['black'])
-                            return
-
-                pygame.draw.rect(fading_text.drawing_surface, FadingText.COLORS['black'], (0, 0, 120, 24), 0)
-                self.screen.blit(fading_text.drawing_surface, (0, 0))
-
-                pygame.display.flip()
-
-            fading_text.fade(FadingText.ST_FADEOUT, 1)
-
-    def run(self, mode='normal'):
+    def run(self):
         log("MirrorText: run()")
         if self.thr is not None:
             if self.thr.isAlive():
@@ -109,13 +74,9 @@ class MirrorText:
         # otherwise, you risk duplicate consecutive phrases
         shuffle(self.phrases)
 
-        if mode == 'normal':
-            self.thr = MirrorThread(0, 'loop', self)
-        else:
-            self.thr = MirrorThread(0, 'special', self)
+        self.thr = MirrorThread(0, 'loop', self)
 
         self.thr.start()
-        # self.thr.join()
 
     def loop(self):
         log("MirrorText: loop()")
@@ -154,10 +115,7 @@ class MirrorThread(threading.Thread):
         self.mirror = mirror
 
     def run(self):
-        if self.name == 'special':
-            self.mirror.special()
-        else:
-            self.mirror.loop()
+        self.mirror.loop()
 
 
 class FadeThread(threading.Thread):
@@ -378,7 +336,6 @@ class FadingText:
 def main():
 
     mirror = MirrorText(fullscreen=False)
-    mirror.special()
     mirror.run()
     # done = False
     #
