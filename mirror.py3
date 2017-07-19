@@ -32,32 +32,35 @@ class Sound:
         return pygame.mixer.music.get_busy()
 
 
-def init_relays(relay_list, quiet=True):
-    log("Initializing relays, please wait")
+class MirrorIO:
 
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    @staticmethod
+    def init_gpio(relay_list, quiet=True):
+        log("Initializing relays, please wait")
 
-    for pin in relay_list:
-        GPIO.setup(pin, GPIO.OUT)
-        GPIO.output(pin, GPIO.HIGH)
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    if not quiet:
-        for pin in relay_list: # cycle individual
-            GPIO.output(pin, GPIO.LOW)
-            time.sleep(0.25)
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0)
-
-        for pin in relay_list:  # all on
-            GPIO.output(pin, GPIO.LOW)
-        time.sleep(1.0)
-
-        for pin in relay_list:  # all off
+        for pin in relay_list:
+            GPIO.setup(pin, GPIO.OUT)
             GPIO.output(pin, GPIO.HIGH)
 
+        if not quiet:
+            for pin in relay_list: # cycle individual
+                GPIO.output(pin, GPIO.LOW)
+                time.sleep(0.25)
+                GPIO.output(pin, GPIO.HIGH)
+                time.sleep(0)
 
-class SwitchPad:
+            for pin in relay_list:  # all on
+                GPIO.output(pin, GPIO.LOW)
+            time.sleep(1.0)
+
+            for pin in relay_list:  # all off
+                GPIO.output(pin, GPIO.HIGH)
+
+
+class SensorPad:
 
     def __init__(self, relay_list):
         self.sound = Sound()
@@ -116,9 +119,9 @@ def log(message):
 def main(argv):
 
     relay_list = [5, 6, 13, 19]
-    init_relays(relay_list, quiet=False)
+    MirrorIO.init_gpio(relay_list, quiet=False)
     last_input_state = GPIO.input(21)
-    pad = SwitchPad(relay_list)
+    pad = SensorPad(relay_list)
 
     done = False
 
