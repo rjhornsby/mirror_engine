@@ -5,6 +5,15 @@ import os, sys, time
 import mirror_display
 import pygame
 
+# Map relay index to GPIO BCM pin id
+RELAYS = {
+    1: 5,
+    2: 6,
+    3: 13,
+    4: 19
+}
+
+SENSOR_GPIO_PIN = 21
 
 class Sound:
     def __init__(self):
@@ -39,7 +48,7 @@ class MirrorIO:
         log("Initializing relays, please wait")
 
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(21, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(SENSOR_GPIO_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
         for pin in relay_list:
             GPIO.setup(pin, GPIO.OUT)
@@ -76,8 +85,8 @@ class SensorPad:
                 log("waiting for thread to finish")
                 pass
 
-        GPIO.output(6, GPIO.HIGH)
-        GPIO.output(13, GPIO.HIGH)
+        GPIO.output(RELAYS[2], GPIO.HIGH)
+        GPIO.output(RELAYS[3], GPIO.HIGH)
 
     def state_changed(self, state):
         log("pin status: " + str(state))
@@ -89,23 +98,23 @@ class SensorPad:
                 log("Sound already playing")
 
             time.sleep(1.5)
-            GPIO.output(5, GPIO.LOW)  # relay 1
+            GPIO.output(RELAYS[1], GPIO.LOW)  # relay 1
             time.sleep(2)
-            GPIO.output(6, GPIO.LOW)  # relay 2
+            GPIO.output(RELAYS[2], GPIO.LOW)  # relay 2
             time.sleep(2)
-            GPIO.output(13, GPIO.LOW)  # relay 3
+            GPIO.output(RELAYS[3], GPIO.LOW)  # relay 3
             self.mirror.run()
 
         else:
             self.mirror.stop()
             time.sleep(1.5)
-            GPIO.output(6, GPIO.HIGH)  # relay 2
+            GPIO.output(RELAYS[2], GPIO.HIGH)
             time.sleep(1.5)
-            GPIO.output(13, GPIO.HIGH)  # relay 3
+            GPIO.output(RELAYS[3], GPIO.HIGH)
 
             self.sound.stop()
 
-            GPIO.output(5, GPIO.HIGH)  # relay 1
+            GPIO.output(RELAYS[1], GPIO.HIGH)
 
 
 def log(message):
@@ -118,9 +127,9 @@ def log(message):
 
 def main(argv):
 
-    relay_list = [5, 6, 13, 19]
+    relay_list = list(RELAYS.values())
     MirrorIO.init_gpio(relay_list, quiet=False)
-    last_input_state = GPIO.input(21)
+    last_input_state = GPIO.input(SENSOR_GPIO_PIN)
     pad = SensorPad(relay_list)
 
     done = False
@@ -136,11 +145,11 @@ def main(argv):
                     if event.key == pygame.K_ESCAPE:
                         done = True
 
-            if GPIO.input(21) != last_input_state:
+            if GPIO.input(SENSOR_GPIO_PIN) != last_input_state:
                 time.sleep(0.25)  # wait to make sure it really changed
-                if GPIO.input(21) != last_input_state:
-                    last_input_state = GPIO.input(21)
-                    pad.state_changed(GPIO.input(21))
+                if GPIO.input(SENSOR_GPIO_PIN) != last_input_state:
+                    last_input_state = GPIO.input(SENSOR_GPIO_PIN)
+                    pad.state_changed(GPIO.input(SENSOR_GPIO_PIN))
             time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
         sys.exit
