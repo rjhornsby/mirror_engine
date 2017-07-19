@@ -25,6 +25,7 @@ class MirrorText:
         # TODO: implement fullscreen argument
         log("MirrorText: init()")
         self.fontlib = []
+        self.fontsize = 72
         self.screen = None
         self.phrases = None
         self.thr = None
@@ -37,19 +38,19 @@ class MirrorText:
         pygame.mouse.set_visible(False)
         font_exts = ['.otf', '.ttf']
 
-        for file in os.listdir(fontdir):
-            filename, extension = os.path.splitext(file)
-            if extension in font_exts:
-                self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), 72))
-
-        log("loaded " + str(len(self.fontlib)) + " fonts")
-
         if fullscreen:
             pygame_screen_mode = pygame.FULLSCREEN|pygame.NOFRAME
             pygame_screen_res = (0, 0)
         else:
             pygame_screen_mode = 0
-            pygame_screen_res = (1024, 768)
+            pygame_screen_res = (1280, 720)
+            self.fontsize = 56
+        for file in os.listdir(fontdir):
+            filename, extension = os.path.splitext(file)
+            if extension in font_exts:
+                self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), self.fontsize))
+
+        log("loaded " + str(len(self.fontlib)) + " fonts")
 
         log("setting screen mode")
         self.screen = pygame.display.set_mode(pygame_screen_res, pygame_screen_mode)

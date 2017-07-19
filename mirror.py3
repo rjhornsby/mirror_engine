@@ -1,9 +1,16 @@
-#!/usr/bin/env python
-
-import RPi.GPIO as GPIO
+#!/usr/bin/env python3
 import os, sys, time
-import mirror_display
 import pygame
+
+GPIO_SIMULATED = True
+if GPIO_SIMULATED:
+    from EmulatorGUI import GPIO
+    SENSOR_PUD = GPIO.PUD_DOWN
+else:
+    import RPi.GPIO as GPIO
+    SENSOR_PUD = GPIO.PUD_UP
+
+import mirror_display
 
 # Map relay index to GPIO BCM pin id
 RELAYS = {
@@ -48,14 +55,14 @@ class MirrorIO:
         log("Initializing relays, please wait")
 
         GPIO.setmode(GPIO.BCM)
-        GPIO.setup(SENSOR_GPIO_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.setup(SENSOR_GPIO_PIN, GPIO.IN, pull_up_down=SENSOR_PUD)
 
         for pin in relay_list:
             GPIO.setup(pin, GPIO.OUT)
             GPIO.output(pin, GPIO.HIGH)
 
         if not quiet:
-            for pin in relay_list: # cycle individual
+            for pin in relay_list:  # cycle individual
                 GPIO.output(pin, GPIO.LOW)
                 time.sleep(0.25)
                 GPIO.output(pin, GPIO.HIGH)
@@ -73,7 +80,7 @@ class SensorPad:
 
     def __init__(self, relay_list):
         self.sound = Sound()
-        self.mirror = mirror_display.MirrorText()
+        self.mirror = mirror_display.MirrorText(fullscreen=False)
         self.relay_list = relay_list
 
     def stop(self):
