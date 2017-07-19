@@ -8,6 +8,7 @@ import pygame
 
 class Sound:
     def __init__(self):
+        os.system('amixer sset "PCM" 100%')
         pygame.mixer.init()
         self.library = {}
         self.now_playing = None
@@ -54,22 +55,6 @@ def init_relays(relay_list, quiet=True):
 
         for pin in relay_list:  # all off
             GPIO.output(pin, GPIO.HIGH)
-
-
-def init_audio(use_hdmi=False):
-    if use_hdmi:
-        log('Audio: using HDMI')
-        os.system('amixer cset numid=3 2')
-        # This makes no sense. From the command line,
-        # there's no 'PCM' control, only 'Master'.
-        # But from within python, the same call there's only
-        # 'PCM', not 'Master'.
-        # os.system('amixer sset "Master" 100%')
-        os.system('amixer sset "PCM" 100%')
-    else:
-        log('Audio: using 3.5mm')
-        os.system('amixer cset numid=3 1')
-        os.system('amixer sset "PCM" 100%')
 
 
 class SwitchPad:
@@ -131,7 +116,6 @@ def log(message):
 def main(argv):
 
     relay_list = [5, 6, 13, 19]
-    init_audio(True)
     init_relays(relay_list, quiet=False)
     last_input_state = GPIO.input(21)
     pad = SwitchPad(relay_list)
