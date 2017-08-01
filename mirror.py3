@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import os, sys, time
 import pygame
+from random import *
+from mutagen import mp3
+import mutagen
+import mirror_display
+
 
 GPIO_SIMULATED = True
 if GPIO_SIMULATED:
@@ -9,8 +14,6 @@ if GPIO_SIMULATED:
 else:
     import RPi.GPIO as GPIO
     SENSOR_PUD = GPIO.PUD_UP
-
-import mirror_display
 
 # Map relay index to GPIO BCM pin id
 RELAYS = {
@@ -26,16 +29,33 @@ class Sound:
     def __init__(self):
         os.system('amixer sset "PCM" 100%')
         pygame.mixer.init()
-        self.library = {}
+        self.library = []
         self.now_playing = None
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
-        self.audio_path = os.path.join(self.base_path, 'audio')
-        pygame.mixer.music.load(os.path.join(self.audio_path, 'beauty_theme_1s_delay.mp3'))
+        self.audio_dir = os.path.join(self.base_path, 'audio')
+        for file in os.listdir(self.audio_dir):
+            if self._verify_format(os.path.join(self.audio_dir, file)):
+                self.library.append(os.path.join(self.audio_dir, file))
+        log('Loaded ' + str(len(self.library)) + ' music files')
 
     def play(self):
-        pygame.mixer.music.load(os.path.join(self.audio_path, 'beauty_theme_1s_delay.mp3'))
+        pygame.mixer.music.load(choice(self.library))
         self.now_playing = pygame.mixer.music.play(-1)
+
+    @staticmethod
+    def _verify_format(file):
+        valid_format = True
+        # pygame won't play 48000Hz mp3s correctly
+        audio = mutagen.File(file)
+        if type(audio) is not mutagen.mp3.MP3:
+            log("WARNING: Invalid audio type '" + str(type(audio)) + "' for " + file)
+            valid_format = False
+        if audio.info.sample_rate != 44100:
+            log('WARNING: Invalid audio sample_rate ' + str(audio.info.sample_rate) + ' for ' + file)
+            valid_format = False
+
+        return valid_format
 
     @staticmethod
     def stop(fade_delay=3000):
@@ -133,7 +153,9 @@ def log(message):
 
 
 def main(argv):
-
+    # TODO: Make mirror display diagnostic info on startup (especially warnings)
+    # TODO: Make mirror clear warnings and start loop on first sensor activation (or after X seconds?)
+    pygame.init()
     relay_list = list(RELAYS.values())
     MirrorIO.init_gpio(relay_list, quiet=False)
     last_input_state = GPIO.input(SENSOR_GPIO_PIN)
@@ -144,12 +166,12 @@ def main(argv):
     try:
         log("Ready, starting loop")
         while not done:
-
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     done = True
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
+                    log("Got key: " + str(event.key))
+                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         done = True
 
             if GPIO.input(SENSOR_GPIO_PIN) != last_input_state:
@@ -159,9 +181,12 @@ def main(argv):
                     pad.state_changed(GPIO.input(SENSOR_GPIO_PIN))
             time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
+        # TODO: fix GPIO emulator threading bug that prevents clean shutdown
+        GPIO.cleanup()
         sys.exit
     finally:
         GPIO.cleanup()
+        sys.exit
 
 if __name__ == "__main__":
     main(sys.argv)
