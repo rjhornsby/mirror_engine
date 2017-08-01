@@ -100,7 +100,7 @@ class SensorPad:
 
     def __init__(self, relay_list):
         self.sound = Sound()
-        self.mirror = mirror_display.MirrorText(fullscreen=False)
+        self.mirror = mirror_display.MirrorText(fullscreen=(not GPIO_SIMULATED))
         self.relay_list = relay_list
 
     def stop(self):
