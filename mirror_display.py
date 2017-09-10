@@ -22,7 +22,6 @@ def log(message):
 
 class MirrorText:
     def __init__(self, fullscreen=True):
-        # TODO: implement fullscreen argument
         log("MirrorText: init()")
         self.fontlib = []
         self.fontsize = 72
@@ -52,10 +51,8 @@ class MirrorText:
 
         log("loaded " + str(len(self.fontlib)) + " fonts")
 
-        log("setting screen mode")
         self.screen = pygame.display.set_mode(pygame_screen_res, pygame_screen_mode)
         self.screen.fill(FadingText.COLORS['black'])
-        log("flipping screen")
         pygame.display.flip()
 
         log("loading phrases")
@@ -65,7 +62,6 @@ class MirrorText:
         log("MirrorText ready!")
 
     def run(self):
-        log("MirrorText: run()")
         if self.thr is not None:
             if self.thr.isAlive():
                 return
@@ -80,7 +76,6 @@ class MirrorText:
         self.thr.start()
 
     def loop(self):
-        log("MirrorText: loop()")
         phrase_index = 0
         last_change = 0
         phrase = self.phrases[phrase_index]
