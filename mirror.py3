@@ -5,6 +5,7 @@ from random import *
 from mutagen import mp3
 import mutagen
 import mirror_display
+import pprint
 
 
 GPIO_SIMULATED = True
@@ -29,33 +30,44 @@ class Sound:
     def __init__(self):
         os.system('amixer sset "PCM" 100%')
         pygame.mixer.init()
-        self.library = []
+        self.library = {}
         self.now_playing = None
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
 
         self.audio_dir = os.path.join(self.base_path, 'audio')
         for file in os.listdir(self.audio_dir):
-            if self._verify_format(os.path.join(self.audio_dir, file)):
-                self.library.append(os.path.join(self.audio_dir, file))
+            filename = os.path.join(self.audio_dir, file)
+            if self._verify_format(filename):
+                self.library[filename] = self.audio_format(filename)
         log('Loaded ' + str(len(self.library)) + ' music files')
 
     def play(self):
-        pygame.mixer.music.load(choice(self.library))
+        filename, metadata = choice(list(self.library.items()))
+        self._init_mixer(metadata)
+        pygame.mixer.music.load(filename)
         self.now_playing = pygame.mixer.music.play(-1)
+
+    @staticmethod
+    def _init_mixer(metadata):
+        pygame.mixer.quit()
+        frequency = int(metadata.sample_rate / metadata.channels)
+        pygame.mixer.pre_init(frequency=frequency, channels=metadata.channels)
+        pygame.mixer.init()
 
     @staticmethod
     def _verify_format(file):
         valid_format = True
-        # pygame won't play 48000Hz mp3s correctly
         audio = mutagen.File(file)
         if type(audio) is not mutagen.mp3.MP3:
             log("WARNING: Invalid audio type '" + str(type(audio)) + "' for " + file)
             valid_format = False
-        if audio.info.sample_rate != 44100:
-            log('WARNING: Invalid audio sample_rate ' + str(audio.info.sample_rate) + ' for ' + file)
-            valid_format = False
 
         return valid_format
+
+    @staticmethod
+    def audio_format(file):
+        audio = mutagen.File(file)
+        return audio.info
 
     @staticmethod
     def stop(fade_delay=3000):
