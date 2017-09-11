@@ -55,10 +55,6 @@ class MirrorText:
         self.screen.fill(FadingText.COLORS['black'])
         pygame.display.flip()
 
-        log("loading phrases")
-        with open(os.path.join(self.base_path, 'phrases.json')) as phrase_file:
-            self.phrases = json.load(phrase_file)
-
         log("MirrorText ready!")
 
     def run(self):
@@ -67,12 +63,15 @@ class MirrorText:
                 return
         self.stopping = False
 
+        with open(os.path.join(self.base_path, 'phrases.json')) as phrase_file:
+            self.phrases = json.load(phrase_file)
+        log("Loaded " + str(len(self.phrases)) + " phrases")
+
         # Randomize the sequence - but don't choose a random phrase from the list each time
         # otherwise, you risk duplicate consecutive phrases
         shuffle(self.phrases)
 
         self.thr = MirrorThread(0, 'loop', self)
-
         self.thr.start()
 
     def loop(self):

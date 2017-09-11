@@ -26,6 +26,7 @@ RELAYS = {
 
 SENSOR_GPIO_PIN = 21
 
+
 class Sound:
     def __init__(self):
         os.system('amixer sset "PCM" 100%')
@@ -33,8 +34,11 @@ class Sound:
         self.library = {}
         self.now_playing = None
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-
         self.audio_dir = os.path.join(self.base_path, 'audio')
+        self._load_library()
+
+    def _load_library(self):
+        self.library = {}
         for file in os.listdir(self.audio_dir):
             filename = os.path.join(self.audio_dir, file)
             if self._verify_format(filename):
@@ -42,6 +46,8 @@ class Sound:
         log('Loaded ' + str(len(self.library)) + ' music files')
 
     def play(self):
+        # reload the library each time in case the list has changed
+        self._load_library()
         filename, metadata = choice(list(self.library.items()))
         self._init_mixer(metadata)
         pygame.mixer.music.load(filename)
