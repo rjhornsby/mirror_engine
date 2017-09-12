@@ -9,6 +9,7 @@ import pprint
 
 
 if 'GPIO_SIMULATED' in os.environ:
+    GPIO_SIMULATED = True
     from EmulatorGUI import GPIO
     SENSOR_PUD = GPIO.PUD_DOWN
 else:
