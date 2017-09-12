@@ -8,8 +8,7 @@ import mirror_display
 import pprint
 
 
-GPIO_SIMULATED = True
-if GPIO_SIMULATED:
+if 'GPIO_SIMULATED' in os.environ:
     from EmulatorGUI import GPIO
     SENSOR_PUD = GPIO.PUD_DOWN
 else:
