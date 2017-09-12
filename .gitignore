@@ -1,7 +1,7 @@
 __pycache__
 *.pyc
 *.log
-audio/*
+cache/audio/*
 .idea
 .DS_Store
 archived

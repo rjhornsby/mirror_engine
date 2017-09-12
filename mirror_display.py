@@ -63,7 +63,7 @@ class MirrorText:
                 return
         self.stopping = False
 
-        with open(os.path.join(self.base_path, 'phrases.json')) as phrase_file:
+        with open(os.path.join(self.base_path, 'cache/phrases.json')) as phrase_file:
             self.phrases = json.load(phrase_file)
         log("Loaded " + str(len(self.phrases)) + " phrases")
 

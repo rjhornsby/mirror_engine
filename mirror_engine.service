@@ -1,0 +1,10 @@
+[Unit]
+Description=Mirror Main Engine
+
+[Service]
+ExecStart=/home/pi/mirror_engine/mirror.py3
+StandardOutput=null
+
+[Install]
+WantedBy=multi-user.target
+Alias=mirror_engine.service

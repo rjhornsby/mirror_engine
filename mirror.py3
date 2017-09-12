@@ -26,7 +26,6 @@ RELAYS = {
 
 SENSOR_GPIO_PIN = 21
 
-
 class Sound:
     def __init__(self):
         os.system('amixer sset "PCM" 100%')
@@ -34,7 +33,7 @@ class Sound:
         self.library = {}
         self.now_playing = None
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
-        self.audio_dir = os.path.join(self.base_path, 'audio')
+        self.audio_dir = os.path.join(self.base_path, 'cache/audio')
         self._load_library()
 
     def _load_library(self):
