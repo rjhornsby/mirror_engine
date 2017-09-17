@@ -4,6 +4,7 @@ import os, sys, time
 import pygame
 import threading
 import json
+from logger import Logger
 from pygame.locals import *
 from random import *
 
@@ -12,17 +13,17 @@ FADE_IN_TIME = 3
 FADE_OUT_TIME = 2
 
 
-def log(message):
-    log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
-    print(log_message)
-    log_fh = open(os.path.abspath(__file__) + '.log', 'a')
-    log_fh.write(log_message + "\n")
-    log_fh.close()
+# def log(message):
+#     log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
+#     print(log_message)
+#     log_fh = open(os.path.abspath(__file__) + '.log', 'a')
+#     log_fh.write(log_message + "\n")
+#     log_fh.close()
 
 
 class MirrorText:
     def __init__(self, fullscreen=True):
-        log("MirrorText: init()")
+        Logger.write.info("MirrorText: init()")
         self.fontlib = []
         self.fontsize = 72
         self.screen = None
@@ -49,13 +50,13 @@ class MirrorText:
             if extension in font_exts:
                 self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), self.fontsize))
 
-        log("loaded " + str(len(self.fontlib)) + " fonts")
+        Logger.write.info("loaded " + str(len(self.fontlib)) + " fonts")
 
         self.screen = pygame.display.set_mode(pygame_screen_res, pygame_screen_mode)
         self.screen.fill(FadingText.COLORS['black'])
         pygame.display.flip()
 
-        log("MirrorText ready!")
+        Logger.write.info("MirrorText ready!")
 
     def run(self):
         if self.thr is not None:
@@ -65,7 +66,7 @@ class MirrorText:
 
         with open(os.path.join(self.base_path, 'cache/phrases.json')) as phrase_file:
             self.phrases = json.load(phrase_file)
-        log("Loaded " + str(len(self.phrases)) + " phrases")
+        Logger.write.info("Loaded " + str(len(self.phrases)) + " phrases")
 
         # Randomize the sequence - but don't choose a random phrase from the list each time
         # otherwise, you risk duplicate consecutive phrases

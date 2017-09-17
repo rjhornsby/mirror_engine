@@ -1,9 +1,14 @@
 [Unit]
-Description=Mirror Main Engine
+Description=Mirror Engine
 
 [Service]
+User=pi
+Group=pi
+Environment="DISPLAY=:0.0"
+WorkingDirectory=/home/pi/mirror_engine
 ExecStart=/home/pi/mirror_engine/mirror.py3
-StandardOutput=null
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

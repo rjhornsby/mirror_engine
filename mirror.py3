@@ -4,6 +4,7 @@ import pygame
 from random import *
 from mutagen import mp3
 import mutagen
+from logger import Logger
 import mirror_display
 import pprint
 
@@ -44,7 +45,8 @@ class Sound:
             filename = os.path.join(self.audio_dir, file)
             if self._verify_format(filename):
                 self.library[filename] = self.audio_format(filename)
-        log('Loaded ' + str(len(self.library)) + ' music files')
+
+        Logger.write.info('Loaded ' + str(len(self.library)) + ' music files')
 
     def play(self):
         # reload the library each time in case the list has changed
@@ -66,7 +68,7 @@ class Sound:
         valid_format = True
         audio = mutagen.File(file)
         if type(audio) is not mutagen.mp3.MP3:
-            log("WARNING: Invalid audio type '" + str(type(audio)) + "' for " + file)
+            Logger.write.warn("Invalid audio type '" + str(type(audio)) + "' for " + file)
             valid_format = False
 
         return valid_format
@@ -91,7 +93,7 @@ class MirrorIO:
 
     @staticmethod
     def init_gpio(relay_list, quiet=True):
-        log("Initializing relays, please wait")
+        Logger.write.info("Initializing relays, please wait")
 
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(SENSOR_GPIO_PIN, GPIO.IN, pull_up_down=SENSOR_PUD)
@@ -128,20 +130,20 @@ class SensorPad:
         # Let the thread finish
         if self.mirror.thr is not None:
             while self.mirror.thr.isAlive():
-                log("waiting for thread to finish")
+                Logger.write.info("waiting for thread to finish")
                 pass
 
         GPIO.output(RELAYS[2], GPIO.HIGH)
         GPIO.output(RELAYS[3], GPIO.HIGH)
 
     def state_changed(self, state):
-        log("pin status: " + str(state))
+        Logger.write.info("pin status: " + str(state))
         if state == True:
 
             if not self.sound.is_busy():
                 self.sound.play()
             else:
-                log("Sound already playing")
+                Logger.write.info("Sound already playing")
 
             time.sleep(1.5)
             GPIO.output(RELAYS[1], GPIO.LOW)  # relay 1
@@ -163,18 +165,39 @@ class SensorPad:
             GPIO.output(RELAYS[1], GPIO.HIGH)
 
 
-def log(message):
-    log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
-    print(log_message)
-    log_fh = open(os.path.abspath(__file__) + '.log', 'a')
-    log_fh.write(log_message + "\n")
-    log_fh.close()
+# class Logger:
+#
+#     write = None
+#
+#     def __init__(self):
+#         syslog = logging.handlers.SysLogHandler(address='/dev/log')
+#         syslog.setFormatter(logging.Formatter('%(pathname)s[%(process)d]: %(levelname)s %(message)s'))
+#         Logger.write = logging.getLogger()
+#         Logger.write.addHandler(syslog)
+#         Logger.write.setLevel(logging.DEBUG)
+#
+#     def __call__(self):
+#         return Logger.write
 
+# def log(message):
+#     log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
+#     print(log_message)
+#     log_fh = open(os.path.abspath(__file__) + '.log', 'a')
+#     log_fh.write(log_message + "\n")
+#     log_fh.close()
 
 def main(argv):
     # TODO: Make mirror display diagnostic info on startup (especially warnings)
     # TODO: Make mirror clear warnings and start loop on first sensor activation (or after X seconds?)
-    pygame.init()
+    log = Logger() # this has to be called at least once
+    Logger.write.info('Starting up')
+    try:
+        Logger.write.debug('Initializing pygame')
+        pygame.init()
+    except (KeyboardInterrupt, SystemExit) as err:
+        Logger.write.error('FATAL:' + err)
+        raise
+
     relay_list = list(RELAYS.values())
     MirrorIO.init_gpio(relay_list, quiet=False)
     last_input_state = GPIO.input(SENSOR_GPIO_PIN)
@@ -183,13 +206,12 @@ def main(argv):
     done = False
 
     try:
-        log("Ready, starting loop")
+        log.write.info('Ready, starting loop')
         while not done:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     done = True
                 if event.type == pygame.KEYDOWN:
-                    log("Got key: " + str(event.key))
                     if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         done = True
 
@@ -206,6 +228,7 @@ def main(argv):
     finally:
         GPIO.cleanup()
         sys.exit
+
 
 if __name__ == "__main__":
     main(sys.argv)
