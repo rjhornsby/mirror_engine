@@ -164,28 +164,6 @@ class SensorPad:
 
             GPIO.output(RELAYS[1], GPIO.HIGH)
 
-
-# class Logger:
-#
-#     write = None
-#
-#     def __init__(self):
-#         syslog = logging.handlers.SysLogHandler(address='/dev/log')
-#         syslog.setFormatter(logging.Formatter('%(pathname)s[%(process)d]: %(levelname)s %(message)s'))
-#         Logger.write = logging.getLogger()
-#         Logger.write.addHandler(syslog)
-#         Logger.write.setLevel(logging.DEBUG)
-#
-#     def __call__(self):
-#         return Logger.write
-
-# def log(message):
-#     log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
-#     print(log_message)
-#     log_fh = open(os.path.abspath(__file__) + '.log', 'a')
-#     log_fh.write(log_message + "\n")
-#     log_fh.close()
-
 def main(argv):
     # TODO: Make mirror display diagnostic info on startup (especially warnings)
     # TODO: Make mirror clear warnings and start loop on first sensor activation (or after X seconds?)
