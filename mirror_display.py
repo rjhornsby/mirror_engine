@@ -30,7 +30,7 @@ class MirrorText:
         font_exts = ['.otf', '.ttf']
 
         if fullscreen:
-            pygame_screen_mode = pygame.FULLSCREEN|pygame.NOFRAME
+            pygame_screen_mode = pygame.FULLSCREEN | pygame.NOFRAME
             pygame_screen_res = (0, 0)
         else:
             pygame_screen_mode = 0
@@ -164,7 +164,6 @@ class FadingText:
         elif direction == FadingText.ST_FADEOUT:
             self.thr = FadeThread(0, 'fade_out', self, fade_interval)
             self.thr.start()
-            # join this so it blocks until finished(?)
             self.thr.join()
         else:
             return
@@ -290,7 +289,8 @@ class FadingText:
         self.screen.blit(s2, (0, 0))  # always draw onto 0,0 of the screen surface
         pygame.display.flip()
 
-    def centered(self, r_width, r_height):
+    @staticmethod
+    def centered(r_width, r_height):
 
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
         x = screen_w / 2 - r_width / 2
@@ -298,7 +298,8 @@ class FadingText:
 
         return x, y
 
-    def random_position(self, r_width, r_height):
+    @staticmethod
+    def random_position(r_width, r_height):
         screen_w, screen_h = pygame.display.Info().current_w, pygame.display.Info().current_h
         x_margin = int(0.05 * screen_w)
         y_margin = int(0.05 * screen_h)
@@ -353,6 +354,7 @@ def main():
     #                 fading_text.fade(fading_text.ST_FADEIN, 3)
     #             else:
     #                 fading_text.stop()
+
 
 if __name__ == "__main__":
     main()

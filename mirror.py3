@@ -6,7 +6,6 @@ from mutagen import mp3
 import mutagen
 from logger import Logger
 import mirror_display
-import pprint
 
 global GPIO_SIMULATED
 GPIO_SIMULATED = False
@@ -29,6 +28,7 @@ RELAYS = {
 
 SENSOR_GPIO_PIN = 21
 
+
 class Sound:
     def __init__(self):
         os.system('amixer sset "PCM" 100%')
@@ -37,7 +37,6 @@ class Sound:
         self.now_playing = None
         self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
         self.audio_dir = os.path.join(self.base_path, 'cache/audio')
-        self._load_library()
 
     def _load_library(self):
         self.library = {}
@@ -51,11 +50,17 @@ class Sound:
     def play(self):
         # reload the library each time in case the list has changed
         self._load_library()
+
+        # If we have no music to play, don't play any music.
+        if len(self.library.items()) == 0:
+            return
+
         filename, metadata = choice(list(self.library.items()))
         self._init_mixer(metadata)
         pygame.mixer.music.load(filename)
         self.now_playing = pygame.mixer.music.play(-1)
 
+    # The mixer does not understand on its own how to play files at 48000Hz, etc.
     @staticmethod
     def _init_mixer(metadata):
         pygame.mixer.quit()
@@ -164,10 +169,11 @@ class SensorPad:
 
             GPIO.output(RELAYS[1], GPIO.HIGH)
 
+
 def main(argv):
     # TODO: Make mirror display diagnostic info on startup (especially warnings)
     # TODO: Make mirror clear warnings and start loop on first sensor activation (or after X seconds?)
-    log = Logger() # this has to be called at least once
+    log = Logger()  # this has to be called at least once
     Logger.write.info('Starting up')
     try:
         Logger.write.debug('Initializing pygame')
