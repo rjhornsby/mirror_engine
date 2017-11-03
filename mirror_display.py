@@ -12,15 +12,6 @@ from random import *
 FADE_IN_TIME = 3
 FADE_OUT_TIME = 2
 
-
-# def log(message):
-#     log_message = time.strftime('[%a %Y-%m-%d %H:%M:%S]: ' + message)
-#     print(log_message)
-#     log_fh = open(os.path.abspath(__file__) + '.log', 'a')
-#     log_fh.write(log_message + "\n")
-#     log_fh.close()
-
-
 class MirrorText:
     def __init__(self, fullscreen=True):
         Logger.write.info("MirrorText: init()")
@@ -30,7 +21,7 @@ class MirrorText:
         self.phrases = None
         self.thr = None
         self.stopping = False
-        self.base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+        self.base_path = os.path.dirname(os.path.abspath(__file__))
 
         fontdir = os.path.join(self.base_path, "data", "fonts")
         pygame.init()
@@ -65,7 +56,7 @@ class MirrorText:
         self.stopping = False
 
         with open(os.path.join(self.base_path, 'cache/phrases.json')) as phrase_file:
-            self.phrases = json.load(phrase_file)
+            self.phrases = json.load(phrase_file)['phrases']
         Logger.write.info("Loaded " + str(len(self.phrases)) + " phrases")
 
         # Randomize the sequence - but don't choose a random phrase from the list each time
