@@ -1,46 +1,48 @@
-[
-  {
-    "text": "you are beautiful",
-    "duration": 2
-  },
-  {
-    "text": "you are fearfully and wonderfully made",
-    "duration": 4
-  },
-  {
-    "text": "you are loved",
-    "duration": 2
-  },
-  {
-    "text": "His grace is sufficient for you",
-    "duration": 3
-  },
-  {
-    "text": "be bold and courageous",
-    "duration": 2
-  },
-  {
-    "text": "you are a child of the risen king",
-    "duration": 3
-  },
-  {
-    "text": "you are enough",
-    "duration": 2
-  },
-  {
-    "text": "you are strong",
-    "duration": 2
-  },
-  {
-    "text": "you are brave",
-    "duration": 2
-  },
-  {
-    "text": "you are God's workmanship, created in Christ Jesus",
-    "duration": 4
-  },
-  {
-    "text": "you are a new creation",
-    "duration": 2
-  }
-]
+{
+  "phrases": [
+    {
+      "text": "you are beautiful",
+      "duration": 2
+    },
+    {
+      "text": "you are fearfully and wonderfully made",
+      "duration": 4
+    },
+    {
+      "text": "you are loved",
+      "duration": 2
+    },
+    {
+      "text": "His grace is sufficient for you",
+      "duration": 3
+    },
+    {
+      "text": "be bold and courageous",
+      "duration": 2
+    },
+    {
+      "text": "you are a child of the risen king",
+      "duration": 3
+    },
+    {
+      "text": "you are enough",
+      "duration": 2
+    },
+    {
+      "text": "you are strong",
+      "duration": 2
+    },
+    {
+      "text": "you are brave",
+      "duration": 2
+    },
+    {
+      "text": "you are God's workmanship, created in Christ Jesus",
+      "duration": 4
+    },
+    {
+      "text": "you are a new creation",
+      "duration": 2
+    }
+  ]
+}

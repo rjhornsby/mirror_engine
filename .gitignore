@@ -1,7 +1,11 @@
+EmulatorGUI.py
+PIN.py
+TypeChecker.py
+tester2.py
 __pycache__
 *.pyc
 *.log
-cache/audio/*
+cache/audio/*.mp3
 .idea
 .DS_Store
 archived

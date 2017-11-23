@@ -34,7 +34,7 @@ class MirrorText:
             pygame_screen_res = (0, 0)
         else:
             pygame_screen_mode = 0
-            pygame_screen_res = (1280, 720)
+            pygame_screen_res = (600, 400)
             self.fontsize = 56
         for file in os.listdir(fontdir):
             filename, extension = os.path.splitext(file)

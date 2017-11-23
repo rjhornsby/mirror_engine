@@ -125,6 +125,7 @@ class MirrorIO:
 class SensorPad:
 
     def __init__(self, relay_list):
+        self.switch_override_state = False
         self.sound = Sound()
         self.mirror = mirror_display.MirrorText(fullscreen=(not GPIO_SIMULATED))
         self.relay_list = relay_list
@@ -143,6 +144,8 @@ class SensorPad:
 
     def state_changed(self, state):
         Logger.write.info("pin status: " + str(state))
+        # Pycharm says 'state == True' can be simplified, but no other approach
+        # seems to behave correctly at runtime.
         if state == True:
 
             if not self.sound.is_busy():
@@ -168,6 +171,16 @@ class SensorPad:
             self.sound.stop()
 
             GPIO.output(RELAYS[1], GPIO.HIGH)
+
+    def input_override(self, state):
+        print("Overriding input: " + str(state))
+        if state:
+            self.switch_override_state = True
+        else:
+            self.switch_override_state = False
+
+    def read_input_state(self):
+        return GPIO.input(SENSOR_GPIO_PIN) or self.switch_override_state
 
 
 def main(argv):
@@ -195,15 +208,22 @@ def main(argv):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     done = True
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        pad.input_override(True)
+                    elif event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         done = True
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_SPACE:
+                        pad.input_override(False)
 
-            if GPIO.input(SENSOR_GPIO_PIN) != last_input_state:
+            current_input_state = pad.read_input_state()
+
+            if current_input_state != last_input_state:
                 time.sleep(0.25)  # wait to make sure it really changed
-                if GPIO.input(SENSOR_GPIO_PIN) != last_input_state:
-                    last_input_state = GPIO.input(SENSOR_GPIO_PIN)
-                    pad.state_changed(GPIO.input(SENSOR_GPIO_PIN))
+                if pad.read_input_state() != last_input_state:
+                    last_input_state = current_input_state
+                    pad.state_changed(current_input_state)
             time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
         # TODO: fix GPIO emulator threading bug that prevents clean shutdown
