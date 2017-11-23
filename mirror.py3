@@ -2,8 +2,8 @@
 import os, sys, time
 import pygame
 from random import *
-from mutagen import mp3
 import mutagen
+from mutagen import mp3
 from logger import Logger
 import mirror_display
 
@@ -42,6 +42,8 @@ class Sound:
         self.library = {}
         for file in os.listdir(self.audio_dir):
             filename = os.path.join(self.audio_dir, file)
+            if file.startswith('.'):
+                continue
             if self._verify_format(filename):
                 self.library[filename] = self.audio_format(filename)
 
@@ -153,27 +155,38 @@ class SensorPad:
             else:
                 Logger.write.info("Sound already playing")
 
-            time.sleep(1.5)
-            GPIO.output(RELAYS[1], GPIO.LOW)  # relay 1
-            time.sleep(2)
-            GPIO.output(RELAYS[2], GPIO.LOW)  # relay 2
-            time.sleep(2)
-            GPIO.output(RELAYS[3], GPIO.LOW)  # relay 3
+            self.sequence_relays_on()
             self.mirror.run()
 
         else:
             self.mirror.stop()
-            time.sleep(1.5)
-            GPIO.output(RELAYS[2], GPIO.HIGH)
-            time.sleep(1.5)
-            GPIO.output(RELAYS[3], GPIO.HIGH)
-
+            self.sequence_relays_off()
             self.sound.stop()
 
-            GPIO.output(RELAYS[1], GPIO.HIGH)
+    @staticmethod
+    def sequence_relays_on():
+        if GPIO_SIMULATED:
+            return
+        time.sleep(1.5)
+        GPIO.output(RELAYS[1], GPIO.LOW)  # relay 1
+        time.sleep(2)
+        GPIO.output(RELAYS[2], GPIO.LOW)  # relay 2
+        time.sleep(2)
+        GPIO.output(RELAYS[3], GPIO.LOW)  # relay 3
+
+    @staticmethod
+    def sequence_relays_off():
+        if GPIO_SIMULATED:
+            return
+        time.sleep(1.5)
+        GPIO.output(RELAYS[2], GPIO.HIGH)
+        time.sleep(1.5)
+        GPIO.output(RELAYS[3], GPIO.HIGH)
+        time.sleep(1.0)
+        GPIO.output(RELAYS[1], GPIO.HIGH)
 
     def input_override(self, state):
-        print("Overriding input: " + str(state))
+        Logger.write.debug("Overriding input: " + str(state))
         if state:
             self.switch_override_state = True
         else:
@@ -186,7 +199,7 @@ class SensorPad:
 def main(argv):
     # TODO: Make mirror display diagnostic info on startup (especially warnings)
     # TODO: Make mirror clear warnings and start loop on first sensor activation (or after X seconds?)
-    log = Logger()  # this has to be called at least once
+    Logger()  # this has to be called at least once to init the logger
     Logger.write.info('Starting up')
     try:
         Logger.write.debug('Initializing pygame')
@@ -203,19 +216,16 @@ def main(argv):
     done = False
 
     try:
-        log.write.info('Ready, starting loop')
+        Logger.write.info('Ready, starting main loop')
         while not done:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     done = True
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        pad.input_override(True)
+                        pad.input_override(not pad.switch_override_state)
                     elif event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         done = True
-                elif event.type == pygame.KEYUP:
-                    if event.key == pygame.K_SPACE:
-                        pad.input_override(False)
 
             current_input_state = pad.read_input_state()
 
