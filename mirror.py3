@@ -2,8 +2,8 @@
 import os, sys, time
 import pygame
 from random import *
-import mutagen
 from mutagen import mp3
+import mutagen
 from logger import Logger
 import mirror_display
 
@@ -21,13 +21,13 @@ else:
 # Map relay index to GPIO BCM pin id
 RELAYS = {
     1: 5,
-    2: 6,
-    3: 13,
-    4: 19
 }
 
-SENSOR_GPIO_PIN = 21
+RELAY_ON = GPIO.HIGH
+RELAY_OFF = GPIO.LOW
 
+SENSOR_GPIO_PIN = 21
+DEBOUNCE_TIME = 0.25
 
 class Sound:
     def __init__(self):
@@ -42,8 +42,6 @@ class Sound:
         self.library = {}
         for file in os.listdir(self.audio_dir):
             filename = os.path.join(self.audio_dir, file)
-            if file.startswith('.'):
-                continue
             if self._verify_format(filename):
                 self.library[filename] = self.audio_format(filename)
 
@@ -55,6 +53,10 @@ class Sound:
 
         # If we have no music to play, don't play any music.
         if len(self.library.items()) == 0:
+            return
+
+        # If we're muted, don't play music
+        if os.path.isfile(os.path.join(self.audio_dir, 'mute_audio.lock')):
             return
 
         filename, metadata = choice(list(self.library.items()))
@@ -107,21 +109,21 @@ class MirrorIO:
 
         for pin in relay_list:
             GPIO.setup(pin, GPIO.OUT)
-            GPIO.output(pin, GPIO.HIGH)
+            GPIO.output(pin, RELAY_OFF)
 
         if not quiet:
             for pin in relay_list:  # cycle individual
-                GPIO.output(pin, GPIO.LOW)
+                GPIO.output(pin, RELAY_ON)
                 time.sleep(0.25)
-                GPIO.output(pin, GPIO.HIGH)
+                GPIO.output(pin, RELAY_OFF)
                 time.sleep(0)
 
             for pin in relay_list:  # all on
-                GPIO.output(pin, GPIO.LOW)
+                GPIO.output(pin, RELAY_ON)
             time.sleep(1.0)
 
             for pin in relay_list:  # all off
-                GPIO.output(pin, GPIO.HIGH)
+                GPIO.output(pin, RELAY_OFF)
 
 
 class SensorPad:
@@ -141,52 +143,11 @@ class SensorPad:
                 Logger.write.info("waiting for thread to finish")
                 pass
 
-        GPIO.output(RELAYS[2], GPIO.HIGH)
-        GPIO.output(RELAYS[3], GPIO.HIGH)
-
-    def state_changed(self, state):
-        Logger.write.info("pin status: " + str(state))
-        # Pycharm says 'state == True' can be simplified, but no other approach
-        # seems to behave correctly at runtime.
-        if state == True:
-
-            if not self.sound.is_busy():
-                self.sound.play()
-            else:
-                Logger.write.info("Sound already playing")
-
-            self.sequence_relays_on()
-            self.mirror.run()
-
-        else:
-            self.mirror.stop()
-            self.sequence_relays_off()
-            self.sound.stop()
-
-    @staticmethod
-    def sequence_relays_on():
-        if GPIO_SIMULATED:
-            return
-        time.sleep(1.5)
-        GPIO.output(RELAYS[1], GPIO.LOW)  # relay 1
-        time.sleep(2)
-        GPIO.output(RELAYS[2], GPIO.LOW)  # relay 2
-        time.sleep(2)
-        GPIO.output(RELAYS[3], GPIO.LOW)  # relay 3
-
-    @staticmethod
-    def sequence_relays_off():
-        if GPIO_SIMULATED:
-            return
-        time.sleep(1.5)
-        GPIO.output(RELAYS[2], GPIO.HIGH)
-        time.sleep(1.5)
-        GPIO.output(RELAYS[3], GPIO.HIGH)
-        time.sleep(1.0)
-        GPIO.output(RELAYS[1], GPIO.HIGH)
+        GPIO.output(RELAYS[1], RELAY_OFF)
 
     def input_override(self, state):
         Logger.write.debug("Overriding input: " + str(state))
+
         if state:
             self.switch_override_state = True
         else:
@@ -195,11 +156,32 @@ class SensorPad:
     def read_input_state(self):
         return GPIO.input(SENSOR_GPIO_PIN) or self.switch_override_state
 
+    def state_changed(self, state):
+        Logger.write.info("pin status: " + str(state))
+        if state == False:
+
+            if not self.sound.is_busy():
+                self.sound.play()
+            else:
+                Logger.write.info("Sound already playing")
+
+            time.sleep(1.5)
+            GPIO.output(RELAYS[1], RELAY_ON)  # relay 1
+            time.sleep(2)
+            self.mirror.run()
+
+        else:
+            self.mirror.stop()
+            time.sleep(1.5)
+            self.sound.stop()
+
+            GPIO.output(RELAYS[1], RELAY_OFF)
+
 
 def main(argv):
     # TODO: Make mirror display diagnostic info on startup (especially warnings)
     # TODO: Make mirror clear warnings and start loop on first sensor activation (or after X seconds?)
-    Logger()  # this has to be called at least once to init the logger
+    log = Logger()  # this has to be called at least once
     Logger.write.info('Starting up')
     try:
         Logger.write.debug('Initializing pygame')
@@ -216,24 +198,25 @@ def main(argv):
     done = False
 
     try:
-        Logger.write.info('Ready, starting main loop')
+        log.write.info('Ready, starting loop')
         while not done:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     done = True
-                elif event.type == pygame.KEYDOWN:
+                if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        pad.input_override(not pad.switch_override_state)
+                        new_state = not pad.switch_override_state
+                        log.write.info("Setting state " + str(new_state))
+                        pad.input_override(new_state)
                     elif event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         done = True
 
-            current_input_state = pad.read_input_state()
-
-            if current_input_state != last_input_state:
-                time.sleep(0.25)  # wait to make sure it really changed
-                if pad.read_input_state() != last_input_state:
-                    last_input_state = current_input_state
-                    pad.state_changed(current_input_state)
+            input_state = pad.read_input_state()
+            if input_state != last_input_state:
+                time.sleep(DEBOUNCE_TIME)  # wait to make sure it really changed
+                if input_state != last_input_state:
+                    last_input_state = input_state
+                    pad.state_changed(input_state)
             time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
         # TODO: fix GPIO emulator threading bug that prevents clean shutdown
