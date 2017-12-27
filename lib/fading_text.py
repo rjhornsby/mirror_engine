@@ -1,146 +1,18 @@
-#!/usr/bin/env python3
-
-import os
 import time
-import pygame
-import threading
-import json
-from logger import Logger
 from random import *
+import threading
+import pygame
+from logger import Logger
+from lib.color import Color
 
-# Set up some constants
-FADE_IN_TIME = 3
-FADE_OUT_TIME = 2
-
-
-class MirrorText:
-    def __init__(self, fullscreen=True):
-        Logger.write.info("MirrorText: init()")
-        self.fontlib = []
-        self.fontsize = 72
-        self.screen = None
-        self.phrases = None
-        self.thr = None
-        self.stopping = False
-        self.base_path = os.path.dirname(os.path.abspath(__file__))
-
-        pygame.init()
-
-        pygame.mouse.set_visible(False)
-
-        if fullscreen:
-            pygame_screen_mode = pygame.FULLSCREEN | pygame.NOFRAME
-            pygame_screen_res = (0, 0)
-        else:
-            pygame_screen_mode = 0
-            pygame_screen_res = (600, 400)
-            self.fontsize = 36  # small screen, use a small font
-
-        self.load_fonts(
-            os.path.join(self.base_path, "data", "fonts"), ['.otf', '.ttf'])
-
-        self.screen = pygame.display.set_mode(pygame_screen_res, pygame_screen_mode)
-        self.screen.fill(FadingText.COLORS['black'])
-        pygame.display.flip()
-
-        Logger.write.info("MirrorText ready!")
-
-    def load_fonts(self, fontdir, font_exts):
-        for file in os.listdir(fontdir):
-            filename, extension = os.path.splitext(file)
-            if extension in font_exts:
-                self.fontlib.append(pygame.font.Font(os.path.join(fontdir, file), self.fontsize))
-
-        Logger.write.info("loaded " + str(len(self.fontlib)) + " fonts")
-
-    def run(self):
-        if self.thr is not None:
-            if self.thr.isAlive():
-                return
-        self.stopping = False
-
-        with open(os.path.join(self.base_path, 'cache/phrases.json')) as phrase_file:
-            self.phrases = json.load(phrase_file)['phrases']
-        Logger.write.info("Loaded " + str(len(self.phrases)) + " phrases")
-
-        # Randomize the sequence - but don't choose a random phrase from the list each time
-        # otherwise, you risk duplicate consecutive phrases
-        shuffle(self.phrases)
-
-        self.thr = MirrorThread(0, 'loop', self)
-        self.thr.start()
-
-    def loop(self):
-        phrase_index = 0
-        last_change = 0
-        phrase = self.phrases[phrase_index]
-        fading_text = FadingText(self.screen, self.fontlib, phrase['text'])
-        while True:
-
-            if self.stopping:
-                Logger.write.debug('MirrorText stopping')
-                fading_text.stop()
-                fading_text.fade(FadingText.ST_FADEOUT, 1)
-                Logger.write.debug('MirrorText stopped')
-                return
-
-            if time.time() > phrase['duration'] + last_change:
-                fading_text.fade(FadingText.ST_FADEOUT, FADE_OUT_TIME)
-                # Next
-                phrase_index += 1
-                if phrase_index >= len(self.phrases):
-                    phrase_index = 0
-
-                phrase = self.phrases[phrase_index]
-                fading_text = FadingText(self.screen, self.fontlib, phrase['text'])
-                last_change = time.time()
-                fading_text.fade(FadingText.ST_FADEIN, FADE_IN_TIME)
-
-    def stop(self):
-        self.stopping = True
-
-
-class MirrorThread(threading.Thread):
-    def __init__(self, thread_id, name, mirror):
-        threading.Thread.__init__(self)
-        self.threadID = thread_id
-        self.name = name
-        self.mirror = mirror
-
-    def run(self):
-        self.mirror.loop()
-
-
-class FadeThread(threading.Thread):
-
-    def __init__(self, thread_id, name, fading_text, fade_interval):
-        threading.Thread.__init__(self)
-        self.threadID = thread_id
-        self.name = name
-        self.fading_text = fading_text
-        self.fade_interval = fade_interval
-
-    def run(self):
-        if self.name == 'fade_in':
-            self.fading_text.fade_in(self.fade_interval)
-        elif self.name == 'fade_out':
-            self.fading_text.fade_out(self.fade_interval)
-        
 
 class FadingText:
-    
     ST_FADEIN = 0
     ST_FADEOUT = 1
     LINE_SPACING = -2
     MARGIN = 0.10
     FADE_IN_EASING = lambda x: x  # Linear
     FADE_OUT_EASING = lambda x: x  # Linear
-
-    COLORS = {
-        "white": pygame.Color(255, 255, 255),
-        "black": pygame.Color(0, 0, 0),
-        "gray": pygame.Color(127, 127, 127)
-    }
 
     def __init__(self, screen, fontlib, text, center_text=False):
         self.thr = None
@@ -162,7 +34,7 @@ class FadingText:
         if self.thr is not None:
             if self.thr.isAlive():
                 return
-            
+
         if direction == FadingText.ST_FADEIN:
             self.thr = FadeThread(0, 'fade_in', self, fade_interval)
             self.thr.start()
@@ -177,7 +49,7 @@ class FadingText:
     def stop(self):
         Logger.write.debug(self.__class__.__name__)
         self.stopping = True
-    
+
     def fade_in(self, fade_interval):
         if self.alpha >= 1.0:
             return
@@ -199,10 +71,10 @@ class FadingText:
             self.alpha = FadingText.FADE_IN_EASING(1.0 * state_time / fade_interval)
 
             self.draw()
-            
+
         self.state = FadingText.ST_FADEIN
         self.alpha = 1.0
-    
+
     def fade_out(self, fade_interval):
         if self.alpha <= 0.0:
             return
@@ -216,7 +88,7 @@ class FadingText:
         # effect of resuming fade
         if self.alpha > 0.0:
             adv_offset = fade_interval - self.alpha * fade_interval
-            
+
         while self.alpha > 0.0:
             if self.stopping:
                 Logger.write.debug("stop request ack")
@@ -226,7 +98,7 @@ class FadingText:
             self.alpha = 1. - FadingText.FADE_OUT_EASING(1.0 * state_time / fade_interval)
 
             self.draw()
-        
+
         self.state = FadingText.ST_FADEOUT
         self.alpha = 0.0
 
@@ -253,7 +125,7 @@ class FadingText:
 
             # render a blank line
             if len(line) == 0:
-                rendered_line = self.font.render("", True, FadingText.COLORS['white'])
+                rendered_line = self.font.render("", True, Color.white.value)
                 self.rendered_text.append(rendered_line)
                 y += line_spacing
 
@@ -266,7 +138,7 @@ class FadingText:
                 if i < len(line):
                     i = line.rfind(" ", 0, i) + 1
 
-                rendered_line = self.font.render(line[:i], True, FadingText.COLORS['white'])
+                rendered_line = self.font.render(line[:i], True, Color.white.value)
 
                 if rendered_line.get_rect().width > longest_line_length:
                     longest_line_length = rendered_line.get_rect().width
@@ -289,7 +161,7 @@ class FadingText:
         s2 = pygame.surface.Surface((screen_w, screen_h))
         self.drawing_surface = s2
         s2.set_alpha(255 * self.alpha)
-        self.screen.fill(FadingText.COLORS['black'])
+        self.screen.fill(Color.black.value)
 
         for rendered_line in self.rendered_text:
             s2.blit(rendered_line, (x, y))
@@ -326,5 +198,20 @@ class FadingText:
             y = randint(min_y, max_y - r_height)
         except ValueError:
             y = min_y
-        
         return x, y
+
+
+class FadeThread(threading.Thread):
+
+    def __init__(self, thread_id, name, fading_text, fade_interval):
+        threading.Thread.__init__(self)
+        self.threadID = thread_id
+        self.name = name
+        self.fading_text = fading_text
+        self.fade_interval = fade_interval
+
+    def run(self):
+        if self.name == 'fade_in':
+            self.fading_text.fade_in(self.fade_interval)
+        elif self.name == 'fade_out':
+            self.fading_text.fade_out(self.fade_interval)

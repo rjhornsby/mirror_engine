@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-import os, sys, time
-import pygame
+import os
+import sys
+import time
 from random import *
-from mutagen import mp3
 import mutagen
+import pygame
+from mutagen import mp3
+from lib.display import MirrorDisplay
 from logger import Logger
-import mirror_display
 
 global GPIO_SIMULATED
 GPIO_SIMULATED = False
@@ -28,6 +30,7 @@ RELAY_OFF = GPIO.LOW
 
 SENSOR_GPIO_PIN = 21
 DEBOUNCE_TIME = 0.25
+
 
 class Sound:
     def __init__(self):
@@ -131,7 +134,9 @@ class SensorPad:
     def __init__(self, relay_list):
         self.switch_override_state = False
         self.sound = Sound()
-        self.mirror = mirror_display.MirrorText(fullscreen=(not GPIO_SIMULATED))
+        basepath = os.path.dirname(os.path.abspath(__file__))
+        self.mirror = MirrorDisplay(basepath, fullscreen=(not GPIO_SIMULATED))
+        # self.mirror = mirror_display.MirrorText(fullscreen=(not GPIO_SIMULATED))
         self.relay_list = relay_list
 
     def stop(self):
@@ -181,6 +186,7 @@ class SensorPad:
 def main(argv):
     # TODO: Make mirror display diagnostic info on startup (especially warnings)
     # TODO: Make mirror clear warnings and start loop on first sensor activation (or after X seconds?)
+
     log = Logger()  # this has to be called at least once
     Logger.write.info('Starting up')
     try:
