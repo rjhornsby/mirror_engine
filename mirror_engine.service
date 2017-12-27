@@ -6,7 +6,7 @@ User=pi
 Group=pi
 Environment="DISPLAY=:0.0"
 WorkingDirectory=/home/pi/mirror_engine
-ExecStart=/home/pi/mirror_engine/mirror.py3
+ExecStart=/home/pi/mirror_engine/mirror.py
 StandardOutput=journal
 StandardError=journal
 
