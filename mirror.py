@@ -7,7 +7,9 @@ import mutagen
 import pygame
 from mutagen import mp3
 from lib.display import MirrorDisplay
+from lib.dme import DME
 from logger import Logger
+
 
 global GPIO_SIMULATED
 GPIO_SIMULATED = False
@@ -31,6 +33,8 @@ RELAY_OFF = GPIO.LOW
 SENSOR_GPIO_PIN = 21
 DEBOUNCE_TIME = 0.25
 
+DISTANCE_THRESHOLD = 1000  # mm
+DISTANCE_SAMPLES = 15
 
 class Sound:
     def __init__(self):
@@ -129,7 +133,7 @@ class MirrorIO:
                 GPIO.output(pin, RELAY_OFF)
 
 
-class SensorPad:
+class ActivationSensor:
 
     def __init__(self, relay_list):
         self.switch_override_state = False
@@ -138,6 +142,8 @@ class SensorPad:
         self.mirror = MirrorDisplay(basepath, fullscreen=(not GPIO_SIMULATED))
         # self.mirror = mirror_display.MirrorText(fullscreen=(not GPIO_SIMULATED))
         self.relay_list = relay_list
+        self.dme = DME(DISTANCE_THRESHOLD, DISTANCE_SAMPLES)
+        self.dme.run()
 
     def stop(self):
         self.mirror.stop()
@@ -159,11 +165,11 @@ class SensorPad:
             self.switch_override_state = False
 
     def read_input_state(self):
-        return GPIO.input(SENSOR_GPIO_PIN) or self.switch_override_state
+        return self.dme.in_range() or self.switch_override_state
 
     def state_changed(self, state):
         Logger.write.info("pin status: " + str(state))
-        if state == False:
+        if state == True:
 
             if not self.sound.is_busy():
                 self.sound.play()
@@ -198,8 +204,9 @@ def main(argv):
 
     relay_list = list(RELAYS.values())
     MirrorIO.init_gpio(relay_list, quiet=False)
-    last_input_state = GPIO.input(SENSOR_GPIO_PIN)
-    pad = SensorPad(relay_list)
+
+    sensor = ActivationSensor(relay_list)
+    last_input_state = sensor.read_input_state
 
     done = False
 
@@ -211,24 +218,25 @@ def main(argv):
                     done = True
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        new_state = not pad.switch_override_state
+                        new_state = not sensor.switch_override_state
                         log.write.info("Setting state " + str(new_state))
-                        pad.input_override(new_state)
+                        sensor.input_override(new_state)
                     elif event.key == pygame.K_ESCAPE or event.key == pygame.K_q:
                         done = True
 
-            input_state = pad.read_input_state()
+            input_state = sensor.read_input_state()
             if input_state != last_input_state:
                 time.sleep(DEBOUNCE_TIME)  # wait to make sure it really changed
                 if input_state != last_input_state:
                     last_input_state = input_state
-                    pad.state_changed(input_state)
+                    sensor.state_changed(input_state)
             time.sleep(0.1)
     except (KeyboardInterrupt, SystemExit):
         # TODO: fix GPIO emulator threading bug that prevents clean shutdown
         GPIO.cleanup()
         sys.exit
     finally:
+        sensor.dme.stop()
         GPIO.cleanup()
         sys.exit
 

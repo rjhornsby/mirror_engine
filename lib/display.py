@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import os
 import pygame
 from lib.color import Color
 from logger import Logger
