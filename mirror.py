@@ -8,6 +8,7 @@ import pygame
 from mutagen import mp3
 from lib.display import MirrorDisplay
 from lib.dme import DME
+from lib.ledstrip import LEDStrip
 from logger import Logger
 
 
@@ -143,10 +144,12 @@ class ActivationSensor:
         # self.mirror = mirror_display.MirrorText(fullscreen=(not GPIO_SIMULATED))
         self.relay_list = relay_list
         self.dme = DME(DISTANCE_THRESHOLD, DISTANCE_SAMPLES)
+        self.led_strip = LEDStrip()
         self.dme.run()
 
     def stop(self):
         self.mirror.stop()
+        self.led_strip.stop()
         self.sound.stop(100)
         # Let the thread finish
         if self.mirror.thr is not None:
@@ -176,13 +179,15 @@ class ActivationSensor:
             else:
                 Logger.write.info("Sound already playing")
 
-            time.sleep(1.5)
-            GPIO.output(RELAYS[1], RELAY_ON)  # relay 1
-            time.sleep(2)
+            # time.sleep(1.5)
+            # GPIO.output(RELAYS[1], RELAY_ON)  # relay 1
+            # time.sleep(2)
+            self.led_strip.run()
             self.mirror.run()
 
         else:
             self.mirror.stop()
+            self.led_strip.stop()
             time.sleep(1.5)
             self.sound.stop()
 
