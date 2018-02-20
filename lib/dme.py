@@ -45,6 +45,7 @@ class DME:
             if self.thr.isAlive():
                 return
         self.thr = DMEThread(0, 'loop', self)
+        self.stopping = False
         self.thr.start()
 
     def loop(self):
